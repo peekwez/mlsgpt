@@ -1,8 +1,6 @@
 import logging
 
-LOG_FORMAT = (
-    "[%(asctime)s] [%(process)s] [%(levelname)s] [%(name)s: %(lineno)3d]: %(message)s"
-)
+LOG_FORMAT = "[%(asctime)s] [%(process)s] [%(levelname)s] [%(name)s]: %(message)s"
 
 
 def get_logger(name: str, log_level: int = logging.INFO) -> logging.Logger:
