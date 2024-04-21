@@ -31,10 +31,11 @@ def get_dynamodb_stream_arn():
     return table["Table"]["LatestStreamArn"]
 
 
-def get_shard_iterator(log: logger.logging.Logger):
+def get_shard_iterator(log: logger.logging.Logger, refresh: bool = False):
     stream_arn = get_dynamodb_stream_arn()
     client = boto3.client("dynamodbstreams")
-    log.info("DynamoDB stream connection established")
+    if not refresh:
+        log.info("DynamoDB stream connection established")
 
     shard_id = client.describe_stream(StreamArn=stream_arn)["StreamDescription"][
         "Shards"
@@ -42,7 +43,8 @@ def get_shard_iterator(log: logger.logging.Logger):
     shard_iterator = client.get_shard_iterator(
         StreamArn=stream_arn, ShardId=shard_id, ShardIteratorType="LATEST"
     )["ShardIterator"]
-    log.info("Shard iterator obtained")
+    if not refresh:
+        log.info("Shard iterator obtained")
     return client, shard_iterator
 
 
@@ -174,11 +176,11 @@ def save_results():
                 shard_iterator = out["NextShardIterator"]
             else:
                 # Handle possible iterator expiration or stream issues
-                log.info("ShardIterator is no longer valid. Refreshing iterator...")
-                _, shard_iterator = get_shard_iterator(log)
+                # log.info("ShardIterator is no longer valid. Refreshing iterator...")
+                _, shard_iterator = get_shard_iterator(log, refresh=True)
 
         except client.exceptions.ExpiredIteratorException:
-            log.warning("ShardIterator expired, obtaining new iterator...")
-            _, shard_iterator = get_shard_iterator(log)
+            # log.warning("ShardIterator expired, obtaining new iterator...")
+            _, shard_iterator = get_shard_iterator(log, refresh=True)
 
         time.sleep(5)
