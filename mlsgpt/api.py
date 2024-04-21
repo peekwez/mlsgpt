@@ -11,9 +11,8 @@ from fastapi import FastAPI, Query, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from kombu import Connection, Queue, Exchange, Producer
-
 from fastapi.responses import RedirectResponse
+from kombu import Connection, Queue, Exchange, Producer
 
 
 from mlsgpt import logger, store, tasks
@@ -75,7 +74,6 @@ async def intermediate(request: Request):
 
     params = {"code": code, "state": state}
     query_string = urllib.parse.urlencode(params)
-    # redirect_uri = request.query_params.get("redirect_uri")
     return RedirectResponse(f"{auth.OPENAPI_REDIRECT_URI}?{query_string}")
 
 
@@ -84,6 +82,7 @@ async def token(request: Request):
     """Handle the callback from Google with the authorization code."""
     request_data = await request.form()
     code = request_data.get("code")
+    # code = request.query_params.get("code")
 
     data = {
         "code": code,
@@ -97,27 +96,13 @@ async def token(request: Request):
         response = await client.post(auth.TOKEN_URL, data=data, headers=headers)
 
     data = response.json()
-    return {
+    response = {
         "access_token": data.get("access_token"),
-        "token_type": "bearer",
+        "token_type": "Bearer",
         "refresh_token": data.get("refresh_token"),
         "expires_in": data.get("expires_in"),
     }
-
-
-@app.get(
-    "/",
-    summary="API Status",
-    description="Check the status of the API.",
-    operation_id="home",
-)
-async def api_status():  # user: dict = Depends(auth.get_current_user)):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return {
-        "status": "API is running",
-        "description": "This API provides access to MLS property listings.",
-        "timestamp": timestamp,
-    }
+    return response
 
 
 @app.get("/privacy", response_class=HTMLResponse, operation_id="getPrivacy")
@@ -128,14 +113,31 @@ async def privacy_policy(request: Request):
 
 
 @app.get(
+    "/",
+    summary="API Status",
+    description="Check the status of the API.",
+    operation_id="home",
+    dependencies=[Depends(auth.get_current_user)],
+)
+async def api_status():
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return {
+        "status": "API is running",
+        "description": "This API provides access to MLS property listings.",
+        "timestamp": timestamp,
+    }
+
+
+@app.get(
     "/listings",
     response_model=List[models.Listing],
     summary="Fetch All Listings",
-    description="Retrieve all listings from the database.",
+    description="Retrieve all listings from the database. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
     operation_id="getAllListings",
+    dependencies=[Depends(auth.get_current_user)],
 )
-async def get_all_listings():  # user: dict = Depends(auth.get_current_user)):
-    listings = dr.read()
+async def get_all_listings(limit: int = 10, offset: int = 0):
+    listings = dr.read(limit=limit, offset=offset)
     return [models.Listing(**listing) for listing in listings]
 
 
@@ -143,14 +145,19 @@ async def get_all_listings():  # user: dict = Depends(auth.get_current_user)):
     "/listings/search",
     response_model=List[models.Listing],
     summary="Search Listings",
-    description="Search listings based on specific attributes such as address or MLS number.",
+    description="Search listings based on specific attributes such as address or MLS number. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
     operation_id="searchListings",
+    dependencies=[Depends(auth.get_current_user)],
 )
 async def search_listings(
     address: Optional[str] = Query(None, description="Address to filter by"),
     mls_number: Optional[str] = Query(None, description="MLS number to filter by"),
-):  # user: dict = Depends(auth.get_current_user),
-    listings = dr.search(address=address, mls_number=mls_number)
+    limit: int = 10,
+    offset: int = 0,
+):
+    listings = dr.search(
+        address=address, mls_number=mls_number, limit=limit, offset=offset
+    )
     return [models.Listing(**listing) for listing in listings]
 
 
@@ -158,36 +165,38 @@ async def search_listings(
     "/listings/nl_search",
     response_model=List[models.Listing],
     summary="Natural Language Search",
-    description="Perform a natural language search to find listings based on a query that describes what you're looking for.",
+    description="Uses natural language search to find listings based on a query that describes what you're looking for. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results. The threshold parameter can be used to adjust the similarity threshold for the search.",
     operation_id="searchListingsNL",
+    dependencies=[Depends(auth.get_current_user)],
 )
-def nl_search(
-    query: str, threshold: float = 0.4
-):  # user: dict = Depends(auth.get_current_user)
-    listings = dr.nl_search(query=query, threshold=threshold)
+def nl_search(query: str, threshold: float = 0.4, limit: int = 10, offset: int = 0):
+    listings = dr.nl_search(
+        query=query, threshold=threshold, limit=limit, offset=offset
+    )
     return [models.Listing(**listing) for listing in listings]
 
 
-# @app.post(
-#     "/listings/extract",
-#     response_model=models.Message,
-#     summary="Extract Data",
-#     description="Extract data from the uploaded MLS file upload by the user. A maximum of 3 files can be uploaded at a time.",
-#     operation_id="extractData",
-# )
-# async def extract_data(openaiFileIdRefs: list[models.FileInfo]):
-#     for file in openaiFileIdRefs:
-#         pd.publish(
-#             file.model_dump(),
-#             exchange=tasks.mls_exchange,
-#             routing_key="process-file",
-#             declare=[tasks.file_queue],
-#         )
+@app.post(
+    "/listings/extract",
+    response_model=models.Message,
+    summary="Extract Data",
+    description="Extract data from the uploaded MLS file upload by the user. A maximum of 3 files can be uploaded at a time.",
+    operation_id="extractData",
+    dependencies=[Depends(auth.get_current_user)],
+)
+async def extract_data(openaiFileIdRefs: list[models.FileInfo]):
+    for file in openaiFileIdRefs:
+        pd.publish(
+            file.model_dump(),
+            exchange=tasks.mls_exchange,
+            routing_key="process-file",
+            declare=[tasks.file_queue],
+        )
 
-#     return models.Message(
-#         OK=True,
-#         message="Batch extraction request submitted. This will take up to 10-20 minutes to complete.",
-#     )
+    return models.Message(
+        OK=True,
+        message="Batch extraction request submitted. This will take up to 10-20 minutes to complete.",
+    )
 
 
 def run_app():

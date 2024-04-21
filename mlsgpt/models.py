@@ -3,6 +3,15 @@ from typing import List
 from pydantic import BaseModel, Field, field_validator
 
 
+class User(BaseModel):
+    sub: int = Field(..., description="A stable identifier for the user")
+    email: str = Field(..., description="The email address of the user")
+    name: str = Field(..., description="The name of the user")
+    email_verified: bool = Field(
+        ..., description="Whether the email address has been verified"
+    )
+
+
 class Page(BaseModel):
     id: str = Field(..., description="A stable identifier for the page")
     num: int = Field(..., description="Page number")

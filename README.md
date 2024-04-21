@@ -10,6 +10,8 @@ listings and use the data to generate a response.
 
 ## Installation
 
+`cd mlsgpt && poetry install`
+
 ## ngrok setup
 
 1. `brew install ngrok`
@@ -18,3 +20,11 @@ listings and use the data to generate a response.
 4. Start ngrok with `ngrok http --domain=api.mlsgpt.docex.io 80`
 5. `cd secrets && ./create_cert.sh` and copy `TXT` parameters to `AWS Route 53`
 6. Copy `/etc/letsencrypt/live/docex.io/chain.pem` to `secrets` folder and upload to ngrok `TLS Certificate Authorities` section
+
+## API
+
+The OpenAPI documentation is available at `https://api.mlsgpt.docex.io/openapi.json`
+
+The API is available at `https://api.mlsgpt.docex.io`
+
+The API documentation is available at `https://api.mlsgpt.docex.io/docs`

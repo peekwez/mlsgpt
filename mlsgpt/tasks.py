@@ -1,6 +1,7 @@
 import os
 import time
 import boto3
+
 from boto3.dynamodb.types import TypeDeserializer
 from kombu import Connection, Exchange, Queue, Message, Producer
 from mlsgpt import core, store, logger, models
@@ -21,13 +22,39 @@ def create_rabbitmq_connection():
     )
 
 
-def get_stream_arn():
+def get_dynamodb_stream_arn():
     dynamodb = boto3.client("dynamodb")
     ssm = boto3.client("ssm")
     parameter_name = os.environ["DOCAI_RESULTS_TABLE"]
     table_name = ssm.get_parameter(Name=parameter_name)["Parameter"]["Value"]
     table = dynamodb.describe_table(TableName=table_name)
     return table["Table"]["LatestStreamArn"]
+
+
+def get_shard_iterator(log: logger.logging.Logger):
+    stream_arn = get_dynamodb_stream_arn()
+    client = boto3.client("dynamodbstreams")
+    log.info("DynamoDB stream connection established")
+
+    shard_id = client.describe_stream(StreamArn=stream_arn)["StreamDescription"][
+        "Shards"
+    ][0]["ShardId"]
+    shard_iterator = client.get_shard_iterator(
+        StreamArn=stream_arn, ShardId=shard_id, ShardIteratorType="LATEST"
+    )["ShardIterator"]
+    log.info("Shard iterator obtained")
+    return client, shard_iterator
+
+
+def deserialize_dynamodb_json(node):
+    """Convert DynamoDB item to Python dictionary."""
+    deserializer = TypeDeserializer()
+    if isinstance(node, list):
+        return [deserialize_dynamodb_json(item) for item in node]
+    elif isinstance(node, dict):
+        return {key: deserializer.deserialize(value) for key, value in node.items()}
+    else:
+        return node  # In case the input is already deserialized
 
 
 def process_file(log: logger.logging.Logger, pub: Producer):
@@ -70,6 +97,44 @@ def process_page(log: logger.logging.Logger):
     return _
 
 
+def process_result(log: logger.logging.Logger):
+
+    writer = store.DataWriter(log=log)
+    log.info("Results datastore started")
+
+    schema_name = os.environ.get("DOCAI_SCHEMA_NAME")
+    schema_version = os.environ.get("DOCAI_SCHEMA_VERSION")
+    log.info("Schema information obtained")
+
+    def _(record: dict):
+        if record["eventName"] == "INSERT":
+            new_image = record["dynamodb"]["NewImage"]
+            item = deserialize_dynamodb_json(new_image)
+
+            if (
+                item["schema_name"] == schema_name
+                and item["schema_version"] == schema_version
+            ):
+
+                error = item.get("error")
+                result = item.get("result")
+                request_id = item["request_id"]
+                log.info(f"Results for request_id:{request_id[:8]}... received")
+
+                if error:
+                    log.error(
+                        f"Results for request_id: {request_id[:8]}... failed error: {error}"
+                    )
+                    return
+
+                if result:
+                    writer.save(dict(request_id=request_id, data=result))
+                    log.info(f"Results for request_id:{request_id[:8]}... saved")
+                    return
+
+    return _
+
+
 def split_pages():
     log = logger.get_logger("split-pages")
     with create_rabbitmq_connection() as conn:
@@ -91,76 +156,29 @@ def extract_data():
                 conn.drain_events()
 
 
-def deserialize_dynamodb_json(node):
-    """Convert DynamoDB item to Python dictionary."""
-    deserializer = TypeDeserializer()
-    if isinstance(node, list):
-        return [deserialize_dynamodb_json(item) for item in node]
-    elif isinstance(node, dict):
-        return {key: deserializer.deserialize(value) for key, value in node.items()}
-    else:
-        return node  # In case the input is already deserialized
-
-
-def process_record(
-    record: dict,
-    schema_name: str,
-    schema_version: str,
-    writer: store.DataWriter,
-    log: logger.logging.Logger,
-):
-    if record["eventName"] == "INSERT":
-        new_image = record["dynamodb"]["NewImage"]
-        item = deserialize_dynamodb_json(new_image)
-
-        if (
-            item["schema_name"] == schema_name
-            and item["schema_version"] == schema_version
-        ):
-
-            error = item.get("error")
-            result = item.get("result")
-            request_id = item["request_id"]
-            log.info(f"Results for request_id:{request_id[:8]}... received")
-
-            if error:
-                log.error(
-                    f"Results for request_id: {request_id[:8]}... failed error: {error}"
-                )
-                return
-
-            if result:
-                writer.save(dict(request_id=request_id, data=result))
-                log.info(f"Results for request_id:{request_id[:8]}... saved")
-                return request_id
-
-
 def save_results():
     log = logger.get_logger("save-results")
-    stream_arn = get_stream_arn()
-    client = boto3.client("dynamodbstreams")
-    shard_id = client.describe_stream(StreamArn=stream_arn)["StreamDescription"][
-        "Shards"
-    ][0]["ShardId"]
-    shard_iterator = client.get_shard_iterator(
-        StreamArn=stream_arn, ShardId=shard_id, ShardIteratorType="LATEST"
-    )["ShardIterator"]
-    log.info("DynamoDB stream connection established")
-    log.info("Shard iterator obtained")
-
-    writer = store.DataWriter(log=log)
-    log.info("Results datastore started")
-
-    schema_name = os.environ.get("DOCAI_SCHEMA_NAME")
-    schema_version = os.environ.get("DOCAI_SCHEMA_VERSION")
+    client, shard_iterator = get_shard_iterator(log)
+    callback = process_result(log)
 
     while True:
-        out = client.get_records(ShardIterator=shard_iterator)
-        records = out["Records"]
+        try:
+            out = client.get_records(ShardIterator=shard_iterator)
+            records = out["Records"]
 
-        if records:
-            for record in records:
-                process_record(record, schema_name, schema_version, writer, log)
+            if records:
+                for record in records:
+                    callback(record)
 
-        shard_iterator = out["NextShardIterator"]
+            if "NextShardIterator" in out:
+                shard_iterator = out["NextShardIterator"]
+            else:
+                # Handle possible iterator expiration or stream issues
+                log.info("ShardIterator is no longer valid. Refreshing iterator...")
+                _, shard_iterator = get_shard_iterator(log)
+
+        except client.exceptions.ExpiredIteratorException:
+            log.warning("ShardIterator expired, obtaining new iterator...")
+            _, shard_iterator = get_shard_iterator(log)
+
         time.sleep(5)

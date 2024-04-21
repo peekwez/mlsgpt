@@ -119,14 +119,18 @@ class DataReader(DataIO):
     def __init__(self, **kwargs):
         super().__init__(mode="r", **kwargs)
 
-    def read(self):
+    def read(self, limit: int = 10, offset: int = 0):
+        limit = min(limit, 20)
         cmd = sql.SQL(constants.LISTINGS_ALL).format(
-            sql.Identifier(os.environ.get("POSTGRES_SCHEMA"))
+            sql.Identifier(os.environ.get("POSTGRES_SCHEMA")),
+            sql.Literal(limit),
+            sql.Literal(offset)
         )
         self.cursor.execute(cmd)
         return self.cursor.fetchall()
 
-    def search(self, address:str=None, mls_number:str=None):
+    def search(self, address:str=None, mls_number:str=None, limit:int=10, offset:int=0):
+        limit = min(limit, 20)
         conditions = []
         if address:
             conditions.append(f"data->'listing_address'->>'street_address' ILIKE '%{address}%'")
@@ -137,18 +141,25 @@ class DataReader(DataIO):
         where_clause = " AND ".join(conditions) if conditions else "TRUE"
         cmd = sql.SQL(constants.LISTINGS_QUERY).format(
             sql.Identifier(os.environ.get("POSTGRES_SCHEMA")),
-            sql.SQL(where_clause)
+            sql.SQL(where_clause),
+            sql.Literal(limit),
+            sql.Literal(offset)
         )
         self.cursor.execute(cmd)
         return self.cursor.fetchall()
     
-    def nl_search(self, query: str, threshold: float = 0.3):
+    def nl_search(self, query: str, threshold: float = 0.3, limit: int = 10, offset: int = 0):
+        limit = min(limit, 20)
         embedding = self.embed(query)
         cmd = sql.SQL(constants.LISTINGS_SEARCH).format(
             sql.Literal(1.0),
             sql.Literal(embedding),
             sql.Identifier(os.environ.get("POSTGRES_SCHEMA")), 
-            sql.Literal(1.0), sql.Literal(embedding), sql.Literal(threshold)
+            sql.Literal(1.0), 
+            sql.Literal(embedding), 
+            sql.Literal(threshold),
+            sql.Literal(limit),
+            sql.Literal(offset)
         )
         self.cursor.execute(cmd)
         return self.cursor.fetchall()
