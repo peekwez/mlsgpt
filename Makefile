@@ -5,5 +5,5 @@ start-services:
 	dotenv --file=.env run mlsgpt run-services
 
 push-code:
-	$(info Pushing to Heroku...)
+	$(info Pushing to remote...)
 	git push origin $(BRANCH)
