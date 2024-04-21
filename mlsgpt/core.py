@@ -55,8 +55,31 @@ def read_image(image: bytes) -> str:
     """
     return base64.b64encode(image).decode("utf-8")
 
+def prepare_request(download_link: str, mime_type) -> list[str,str]:
+    """Extract data from PDF
 
-def create_request(image: str, mime_type:str) -> str:
+    Args:
+        download_link (str): URL of media
+        mime_type (str): MIME type of media
+
+    Returns:
+        list[bytes]: List of images
+    """
+    suffix = mime_type.split("/")[1]
+    filename = tempfile.NamedTemporaryFile(delete=False, suffix=f".{suffix}").name
+    download_file(download_link, filename)
+
+    if suffix == "pdf":
+        images = convert_pdf2png(filename)
+        mime_type = DEFAULT_MIME_TYPE
+    elif suffix == ["png", "jpeg", "jpg", "webp"]:
+        images = [read_image(filename)]
+
+    os.unlink(filename)
+    return images, mime_type
+
+
+def extract_data(image: str, mime_type:str) -> str:
     """Create a batch request to extract data from image
 
     Args:
@@ -78,50 +101,6 @@ def create_request(image: str, mime_type:str) -> str:
         'x-api-key': os.environ.get("DOCAI_API_KEY")
     }
     r = httpx.post(url, headers=headers, json=data, timeout=120)
-    if r.json()["OK"]:
-        return r.json()["result"]["request_id"]
+    return r.json()
 
 
-def extract_data(download_link: str, mime_type) -> list[str]:
-    """Extract data from PDF
-
-    Args:
-        download_link (str): URL of media
-        mime_type (str): MIME type of media
-
-    Returns:
-        list[bytes]: List of images
-    """
-    suffix = mime_type.split("/")[1]
-    filename = tempfile.NamedTemporaryFile(delete=False, suffix=f".{suffix}").name
-    download_file(download_link, filename)
-
-    if suffix == "pdf":
-        images = convert_pdf2png(filename)
-        mime_type = DEFAULT_MIME_TYPE
-    elif suffix == ["png", "jpeg", "jpg", "webp"]:
-        images = [read_image(filename)]
-
-    requests = [create_request(image, mime_type) for image in images]
-    os.unlink(filename)
-    return requests
-
-
-def fetch_result(request_id: str) -> dict|None:
-    """Fetch results from batch request
-
-    Args:
-        request_id (str): Request ID
-
-    Returns:
-        dict: Results
-    """
-    url = f"{os.environ.get("DOCAI_API_URL")}/get-result"
-    data = {"request_id": request_id}
-    headers = {
-        'Content-Type': 'application/json',
-        'x-api-key': os.environ.get("DOCAI_API_KEY")
-    }
-    r = httpx.post(url, headers=headers, json=data, timeout=120)
-    if r.json()["OK"]:
-        return r.json()["result"]
