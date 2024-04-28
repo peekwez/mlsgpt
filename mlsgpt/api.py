@@ -150,11 +150,36 @@ async def get_all_listings(limit: int = 10, offset: int = 0):
 async def search_listings(
     address: Optional[str] = Query(None, description="Address to filter by"),
     mls_number: Optional[str] = Query(None, description="MLS number to filter by"),
+    unit_type: Optional[str] = Query(None, description="Unit type to filter by"),
+    dom_eq: Optional[float] = Query(
+        None, description="Days on market equal to filter by"
+    ),
+    dom_le: Optional[float] = Query(
+        None, description="Days on market less or equal than filter by"
+    ),
+    dom_ge: Optional[float] = Query(
+        None, description="Days on market greater or equal than filter by"
+    ),
+    bedrooms: Optional[str] = Query(
+        None, description="Number of bedrooms to filter by"
+    ),
+    washrooms: Optional[str] = Query(
+        None, description="Number of washrooms to filter by"
+    ),
     limit: int = 10,
     offset: int = 0,
 ):
     listings = reader.search(
-        address=address, mls_number=mls_number, limit=limit, offset=offset
+        address=address,
+        mls_number=mls_number,
+        unit_type=unit_type,
+        dom_eq=dom_eq,
+        dom_le=dom_le,
+        dom_ge=dom_ge,
+        bedrooms=bedrooms,
+        washrooms=washrooms,
+        limit=limit,
+        offset=offset,
     )
     return [models.Listing(**listing) for listing in listings]
 
@@ -205,8 +230,8 @@ def run_app():
     port = int(os.environ.get("PORT", 8000))
     log.info("API service initialized")
 
-    public_url = ingress.start_ngrok(port)  # Start ngrok and get the public URL
-    log.info(f"The ngrok tunnel is running at: {public_url}")
+    # public_url = ingress.start_ngrok(port)  # Start ngrok and get the public URL
+    # log.info(f"The ngrok tunnel is running at: {public_url}")
     try:
         # Use uvicorn to run the app. The Uvicorn server will be stopped using Ctrl+C in the terminal
         config = uvicorn.config.LOGGING_CONFIG

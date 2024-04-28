@@ -129,16 +129,40 @@ class DataReader(DataIO):
         self.cursor.execute(cmd)
         return self.cursor.fetchall()
 
-    def search(self, address:str=None, mls_number:str=None, limit:int=10, offset:int=0):
+    def search(self, address:str=None, mls_number:str=None, 
+        unit_type:str=None, dom_eq:float=None, 
+        dom_le:float=None, dom_ge:float=None,
+        bedrooms:str=None, washrooms:str=None,
+        limit:int=10, offset:int=0):
+
         limit = min(limit, 20)
         conditions = []
         if address:
             conditions.append(f"data->'listing_address'->>'street_address' ILIKE '%{address}%'")
 
+        if unit_type:
+            conditions.append(f"data->>'unit_type' ILIKE '%{unit_type}%'")
+
+        if dom_eq:
+            conditions.append(f"data->>'days_on_market' = '{dom_eq}'")
+
+        if dom_le:
+            conditions.append(f"data->>'days_on_market' <= '{dom_le}'")
+
+        if dom_ge:
+            conditions.append(f"data->>'days_on_market' >= '{dom_ge}'")
+
+        if bedrooms:
+            conditions.append(f"data->>'number_of_bedrooms' ILIKE '%{bedrooms}%'")
+
+        if washrooms:
+            conditions.append(f"data->>'number_of_washrooms' ILIKE '%{washrooms}%'")
+
         if mls_number:
             conditions.append(f"data->>'mls_number' = '{mls_number}'")
         
         where_clause = " AND ".join(conditions) if conditions else "TRUE"
+        print(where_clause)
         cmd = sql.SQL(constants.LISTINGS_QUERY).format(
             sql.Identifier(os.environ.get("POSTGRES_SCHEMA")),
             sql.SQL(where_clause),
