@@ -13,7 +13,7 @@ def cli() -> None:
 @cli.command()
 def run_services():
     processes = [
-        # mp.Process(target=tasks.run_tasks),
+        mp.Process(target=tasks.run_tasks),
         mp.Process(target=api.run_app),
     ]
     for p in processes:
