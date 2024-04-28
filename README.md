@@ -28,3 +28,7 @@ The OpenAPI documentation is available at `https://api.mlsgpt.docex.io/openapi.j
 The API is available at `https://api.mlsgpt.docex.io`
 
 The API documentation is available at `https://api.mlsgpt.docex.io/docs`
+
+## Vectors
+
+Install `pgvector` extension in the database
