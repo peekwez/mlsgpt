@@ -18,7 +18,8 @@ from fastapi.responses import RedirectResponse
 from mlsgpt import logger, store, tasks
 from mlsgpt import auth, models, ingress
 
-PRIVACY_HTML = Path(os.environ["ASSETS_PATH"], "privacy.html")
+ASSETS_PATH = Path(__file__).parent.parent / "assets"
+PRIVACY_HTML = ASSETS_PATH / "privacy.html"
 
 
 app = FastAPI(
@@ -40,8 +41,8 @@ app = FastAPI(
 sqs = boto3.client("sqs")
 reader: store.DataReader | None = None
 
-app.mount("/static", StaticFiles(directory=os.environ["ASSETS_PATH"]), name="static")
-templates = Jinja2Templates(directory=os.environ["ASSETS_PATH"])
+app.mount("/static", StaticFiles(directory=ASSETS_PATH), name="static")
+templates = Jinja2Templates(ASSETS_PATH)
 
 
 @app.get("/login", operation_id="login")
