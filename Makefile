@@ -10,8 +10,12 @@ push-code:
 
 build-amd64:
 	$(info Building mlsgpt for amd64...)
-	docker build -t mlsgpt-amd64/python3.12:latest --platform linux/amd64 -f Dockerfile . 
+	docker build -t mlsgpt-amd64:latest --platform linux/amd64 -f Dockerfile .
+	docker tag mlsgpt-amd64:latest kwesi/mlsgpt-amd64:latest
+	docker push kwesi/mlsgpt-amd64:latest
 
 build-arm64:
 	$(info Building mlsgpt for arm64...)
-	docker build -t mlsgpt-arm64/python3.12:latest --platform linux/arm64 -f Dockerfile .
+	docker build -t mlsgpt-arm64:latest --platform linux/arm64 -f Dockerfile .
+	docker tag mlsgpt-arm64:latest kwesi/mlsgpt-arm64:latest
+	docker push kwesi/mlsgpt-arm64:latest

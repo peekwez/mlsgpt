@@ -1,11 +1,9 @@
 services:
   mlsgpt-arm64:
     container_name: mlsgpt-arm64
-    image: mlsgpt-arm64/python3.12:latest
+    image: kwesi/mlsgpt-arm64:latest
     networks:
       - mlsgpt
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       - ./.env.deploy:/app/.env:ro
     ports:
