@@ -1,186 +1,129 @@
-import os
+import json
 import time
 import boto3
-
-from boto3.dynamodb.types import TypeDeserializer
-from kombu import Connection, Exchange, Queue, Message, Producer
+from typing import Callable
 from mlsgpt import core, store, logger, models
 
 
-mls_exchange = Exchange("mls", type="direct", durable=True)
-file_queue = Queue(
-    "mls.process-file", exchange=mls_exchange, routing_key="process-file"
-)
-page_queue = Queue(
-    "mls.process-page", exchange=mls_exchange, routing_key="process-page"
-)
+DELAY_SECONDS = 120
+
+sqs = boto3.client("sqs")
 
 
-def create_rabbitmq_connection():
-    return Connection(
-        f"amqp://{os.environ.get('RABBITMQ_USER')}:{os.environ.get('RABBITMQ_PASSWORD')}@{os.environ.get('RABBITMQ_HOST')}:{os.environ.get('RABBITMQ_PORT')}/%2F"
+def create_sqs_queue(queue_name, delay_seconds=0):
+    response = sqs.create_queue(
+        QueueName=queue_name, Attributes={"DelaySeconds": str(delay_seconds)}
+    )
+    return response["QueueUrl"]
+
+
+file_queue_url = create_sqs_queue("mls_process_file")
+result_queue_url = create_sqs_queue("mls_process_result", delay_seconds=DELAY_SECONDS)
+
+
+def publish_message(queue_url, message_body, delay_seconds=0):
+    sqs.send_message(
+        QueueUrl=queue_url, MessageBody=message_body, DelaySeconds=delay_seconds
     )
 
 
-def get_dynamodb_stream_arn():
-    dynamodb = boto3.client("dynamodb")
-    ssm = boto3.client("ssm")
-    parameter_name = os.environ["DOCAI_RESULTS_TABLE"]
-    table_name = ssm.get_parameter(Name=parameter_name)["Parameter"]["Value"]
-    table = dynamodb.describe_table(TableName=table_name)
-    return table["Table"]["LatestStreamArn"]
+def process_file(
+    message_body: str,
+    log: logger.logging.Logger,
+    *,
+    writer: store.DataWriter | None = None,
+) -> None:
+    file = models.FileInfo.model_validate_json(message_body)
+    log.info(f"File id: {file.id} received")
 
+    images, mime_type = core.prepare_request(file.download_link, file.mime_type)
+    size = len(images)
+    log.info(f"File id: {file.id} split into {size} pages")
 
-def get_shard_iterator(log: logger.logging.Logger, refresh: bool = False):
-    stream_arn = get_dynamodb_stream_arn()
-    client = boto3.client("dynamodbstreams")
-    if not refresh:
-        log.info("DynamoDB stream connection established")
-
-    shard_id = client.describe_stream(StreamArn=stream_arn)["StreamDescription"][
-        "Shards"
-    ][0]["ShardId"]
-    shard_iterator = client.get_shard_iterator(
-        StreamArn=stream_arn, ShardId=shard_id, ShardIteratorType="LATEST"
-    )["ShardIterator"]
-    if not refresh:
-        log.info("Shard iterator obtained")
-    return client, shard_iterator
-
-
-def deserialize_dynamodb_json(node):
-    """Convert DynamoDB item to Python dictionary."""
-    deserializer = TypeDeserializer()
-    if isinstance(node, list):
-        return [deserialize_dynamodb_json(item) for item in node]
-    elif isinstance(node, dict):
-        return {key: deserializer.deserialize(value) for key, value in node.items()}
-    else:
-        return node  # In case the input is already deserialized
-
-
-def process_file(log: logger.logging.Logger, pub: Producer):
-    def _(body: str, message: Message):
-        file = models.FileInfo(**body)
-        log.info(f"Message id: {file.id} received")
-
-        images, mime_type = core.prepare_request(file.download_link, file.mime_type)
-        size = len(images)
-        log.info(f"Message id: {file.id} split into {size} pages")
-
-        for i, image in enumerate(images):
-            page = models.Page(
-                id=file.id, num=i + 1, content=image, mime_type=mime_type
-            )
-            pub.publish(
-                page.model_dump(),
-                exchange=mls_exchange,
-                routing_key="process-page",
-                declare=[page_queue],
-            )
-
-            log.info(f"Message id: {file.id} {page.num}/{size} published")
-
-        message.ack()
-
-    return _
-
-
-def process_page(log: logger.logging.Logger):
-    def _(body: str, message: Message):
-        page = models.Page(**body)
-        log.info(f"Message id: {page.id} page: {page.num} received")
+    for i, image in enumerate(images):
+        page = models.Page(id=file.id, num=i + 1, content=image, mime_type=mime_type)
         ret = core.extract_data(page.content, page.mime_type)
-        log.info(
-            f"Extraction id: {page.id} page: {page.num} queued, request_id: {ret['result']['request_id'][:8]}..."
+        _id = ret["result"]["request_id"]
+        if ret["OK"]:
+            log.info(f"Page id: {page.id} page: {page.num}/{size} queued")
+            publish_message(
+                result_queue_url, json.dumps({"id": _id}), delay_seconds=DELAY_SECONDS
+            )
+            log.info(
+                f"Page id: {page.id} page: {page.num}/{size} result: {_id[:8]}... published"
+            )
+        else:
+            log.error(f"Page id: {page.id} page: {page.num} failed")
+            log.error(f"Error: {ret['result']['error']}")
+        time.sleep(0.5)
+
+
+def process_result(
+    message_body: str,
+    log: logger.logging.Logger,
+    *,
+    writer: store.DataWriter | None = None,
+) -> None:
+
+    req = models.Result.model_validate_json(message_body)
+    short_id = req.id[:8]
+    log.info(f"Result id: {short_id}... received")
+
+    ret = core.fetch_result(req.id)
+    status = ret["result"]["status"]
+    
+
+    if status in ["QUEUED", "RUNNING"]:
+        log.info(f"Result id: {short_id}... status={status}")
+        publish_message(
+            result_queue_url, req.model_dump_json(), delay_seconds=DELAY_SECONDS
         )
-        message.ack()
-
-    return _
-
-
-def process_result(log: logger.logging.Logger):
-
-    writer = store.DataWriter(log=log)
-    log.info("Results datastore started")
-
-    schema_name = os.environ.get("DOCAI_SCHEMA_NAME")
-    schema_version = os.environ.get("DOCAI_SCHEMA_VERSION")
-    log.info("Schema information obtained")
-
-    def _(record: dict):
-        if record["eventName"] == "INSERT":
-            new_image = record["dynamodb"]["NewImage"]
-            item = deserialize_dynamodb_json(new_image)
-
-            if (
-                item["schema_name"] == schema_name
-                and item["schema_version"] == schema_version
-            ):
-
-                error = item.get("error")
-                result = item.get("result")
-                request_id = item["request_id"]
-                log.info(f"Results for request_id:{request_id[:8]}... received")
-
-                if error:
-                    log.error(
-                        f"Results for request_id: {request_id[:8]}... failed error: {error}"
-                    )
-                    return
-
-                if result:
-                    writer.save(dict(request_id=request_id, data=result))
-                    log.info(f"Results for request_id:{request_id[:8]}... saved")
-                    return
-
-    return _
+    elif status == "COMPLETED":
+        log.info(f"Result id: {short_id}... success")
+        writer.save(ret["result"])
+        log.info(f"Result id: {short_id}... saved")
+    elif status == "FAILED":
+        log.error(f"Error: {ret["result"]["error"]}")
+        log.error(f"Result id: {short_id}... failed")
 
 
-def split_pages():
-    log = logger.get_logger("split-pages")
-    with create_rabbitmq_connection() as conn:
-        pub = conn.Producer(serializer="json")
-        log.info("RabbitMQ connection established")
-        with conn.Consumer(file_queue, callbacks=[process_file(log, pub)]) as _:
-            log.info("File queue consumer started")
-            while True:
-                conn.drain_events()
-
-
-def extract_data():
-    log = logger.get_logger("extract-data")
-    with create_rabbitmq_connection() as conn:
-        log.info("RabbitMQ connection established")
-        with conn.Consumer(page_queue, callbacks=[process_page(log)]) as _:
-            log.info("Page queue consumer started")
-            while True:
-                conn.drain_events()
-
-
-def save_results():
-    log = logger.get_logger("save-results")
-    client, shard_iterator = get_shard_iterator(log)
-    callback = process_result(log)
-
+def poll_sqs_messages(
+    queue_url,
+    process_message_func: Callable,
+    log: logger.logging.Logger,
+    *,
+    writer: store.DataWriter | None = None,
+):
+    sqs = boto3.client("sqs")
     while True:
-        try:
-            out = client.get_records(ShardIterator=shard_iterator)
-            records = out["Records"]
+        response = sqs.receive_message(
+            QueueUrl=queue_url, MaxNumberOfMessages=10, WaitTimeSeconds=20
+        )
+        messages = response.get("Messages", [])
+        for message in messages:
+            process_message_func(message["Body"], log, writer=writer)
+            sqs.delete_message(
+                QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"]
+            )
 
-            if records:
-                for record in records:
-                    callback(record)
 
-            if "NextShardIterator" in out:
-                shard_iterator = out["NextShardIterator"]
-            else:
-                # Handle possible iterator expiration or stream issues
-                # log.info("ShardIterator is no longer valid. Refreshing iterator...")
-                _, shard_iterator = get_shard_iterator(log, refresh=True)
+def run_tasks():
+    log = logger.get_logger("task-service")
+    writer = store.DataWriter(log=log)
 
-        except client.exceptions.ExpiredIteratorException:
-            # log.warning("ShardIterator expired, obtaining new iterator...")
-            _, shard_iterator = get_shard_iterator(log, refresh=True)
+    from threading import Thread
 
-        time.sleep(5)
+    Thread(
+        target=poll_sqs_messages,
+        args=(result_queue_url, process_result, log),
+        kwargs=dict(writer=writer),
+    ).start()
+    log.info("Result queue listener started")
+    time.sleep(2)
+
+    Thread(target=poll_sqs_messages, args=(file_queue_url, process_file, log)).start()
+    log.info("File queue listener started")
+    time.sleep(2)
+
+    log.info("Task service started")
+    core.keep_alive()

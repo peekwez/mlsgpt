@@ -1,6 +1,6 @@
 import uuid
 from typing import List
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, conlist
 
 
 class User(BaseModel):
@@ -19,6 +19,10 @@ class Page(BaseModel):
     mime_type: str = Field(..., description="Mime type of the image")
 
 
+class Result(BaseModel):
+    id: str = Field(..., description="The unique identifier of the listing")
+
+
 class FileInfo(BaseModel):
     name: str = Field(..., description="The name of the file")
     id: str = Field(..., description="A stable identifier for the file.")
@@ -31,8 +35,10 @@ class FileInfo(BaseModel):
     )
 
 
-class FileInfos(BaseModel):
-    files: List[FileInfo] = Field(..., description="List of file information")
+class OpenAIFileIdRefs(BaseModel):
+    openaiFileIdRefs: conlist(FileInfo, min_length=1, max_length=2) = Field(  # type: ignore
+        ..., description="List of file information. Maximum of 2 files."
+    )
 
 
 class Message(BaseModel):

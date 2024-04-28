@@ -1,6 +1,7 @@
 import os
 import uvicorn
 
+import boto3
 import httpx
 import urllib.parse
 
@@ -12,7 +13,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
-from kombu import Connection, Queue, Exchange, Producer
 
 
 from mlsgpt import logger, store, tasks
@@ -36,15 +36,12 @@ app = FastAPI(
     ],
     swagger_ui_oauth2_redirect_url="/authorize",
 )
+
+sqs = boto3.client("sqs")
+reader: store.DataReader | None = None
+
 app.mount("/static", StaticFiles(directory=os.environ["ASSETS_PATH"]), name="static")
 templates = Jinja2Templates(directory=os.environ["ASSETS_PATH"])
-
-
-exchange = Exchange("mls", type="direct", durable=True)
-file_queue = Queue("mls.process-file", exchange=exchange, routing_key="process-file")
-dr: store.DataReader | None = None
-con: Connection | None = None
-pd: Producer | None = None
 
 
 @app.get("/login", operation_id="login")
@@ -137,7 +134,7 @@ async def api_status():
     dependencies=[Depends(auth.get_current_user)],
 )
 async def get_all_listings(limit: int = 10, offset: int = 0):
-    listings = dr.read(limit=limit, offset=offset)
+    listings = reader.read(limit=limit, offset=offset)
     return [models.Listing(**listing) for listing in listings]
 
 
@@ -155,7 +152,7 @@ async def search_listings(
     limit: int = 10,
     offset: int = 0,
 ):
-    listings = dr.search(
+    listings = reader.search(
         address=address, mls_number=mls_number, limit=limit, offset=offset
     )
     return [models.Listing(**listing) for listing in listings]
@@ -170,7 +167,7 @@ async def search_listings(
     dependencies=[Depends(auth.get_current_user)],
 )
 def nl_search(query: str, threshold: float = 0.4, limit: int = 10, offset: int = 0):
-    listings = dr.nl_search(
+    listings = reader.nl_search(
         query=query, threshold=threshold, limit=limit, offset=offset
     )
     return [models.Listing(**listing) for listing in listings]
@@ -180,17 +177,15 @@ def nl_search(query: str, threshold: float = 0.4, limit: int = 10, offset: int =
     "/listings/extract",
     response_model=models.Message,
     summary="Extract Data",
-    description="Extract data from the uploaded MLS file upload by the user. A maximum of 3 files can be uploaded at a time.",
+    description="Extract data from the uploaded MLS file upload by the user. A maximum of 2 files can be uploaded at a time.",
     operation_id="extractData",
     dependencies=[Depends(auth.get_current_user)],
 )
-async def extract_data(openaiFileIdRefs: list[models.FileInfo]):
-    for file in openaiFileIdRefs:
-        pd.publish(
-            file.model_dump(),
-            exchange=tasks.mls_exchange,
-            routing_key="process-file",
-            declare=[tasks.file_queue],
+async def extract_data(req: models.OpenAIFileIdRefs):
+    for file in req.openaiFileIdRefs:
+        sqs.send_message(
+            QueueUrl=tasks.file_queue_url,
+            MessageBody=file.model_dump_json(),
         )
 
     return models.Message(
@@ -200,17 +195,11 @@ async def extract_data(openaiFileIdRefs: list[models.FileInfo]):
 
 
 def run_app():
-    global dr, pd
+    global reader
     log = logger.get_logger("api-service")
 
-    dr = store.DataReader()
+    reader = store.DataReader()
     log.info("Data reader started")
-
-    con = tasks.create_rabbitmq_connection()
-    log.info("RabbitMQ connection established")
-
-    pd = con.Producer(serializer="json")
-    log.info("File queue producer started")
 
     port = int(os.environ.get("PORT", 8000))
     log.info("API service initialized")

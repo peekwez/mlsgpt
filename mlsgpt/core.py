@@ -1,9 +1,13 @@
 import os
+import sys
+import time
 import fitz
 import httpx
 import base64
 import tempfile
 import requests
+import threading
+import multiprocessing
 
 
 DPI = 450
@@ -44,15 +48,16 @@ def convert_pdf2png(filename: str) -> list[str]:
     return images
 
 
-def read_image(image: bytes) -> str:
+def read_image(filename: str) -> str:
     """Read image
 
     Args:
-        image (bytes): Image
-
+        filename (str): Image filename
     Returns:
         str: Base64 encoded image
     """
+    with open(filename, "rb") as f:
+        image = f.read()
     return base64.b64encode(image).decode("utf-8")
 
 def prepare_request(download_link: str, mime_type) -> list[str,str]:
@@ -72,7 +77,7 @@ def prepare_request(download_link: str, mime_type) -> list[str,str]:
     if suffix == "pdf":
         images = convert_pdf2png(filename)
         mime_type = DEFAULT_MIME_TYPE
-    elif suffix == ["png", "jpeg", "jpg", "webp"]:
+    elif suffix in ["png", "jpeg", "jpg", "webp"]:
         images = [read_image(filename)]
 
     os.unlink(filename)
@@ -104,3 +109,31 @@ def extract_data(image: str, mime_type:str) -> str:
     return r.json()
 
 
+def fetch_result(request_id:str)->dict:
+    """Fetch result of extraction
+
+    Args:
+        request_id (str): Request ID
+
+    Returns:
+        dict: Result of extraction
+    """
+    url = f"{os.environ.get("DOCAI_API_URL")}/get-result"
+    data = {"request_id": request_id}
+    headers = {
+        'Content-Type': 'application/json',
+        'x-api-key': os.environ.get("DOCAI_API_KEY")
+    }
+    r = httpx.post(url, headers=headers, json=data, timeout=120)
+    return r.json()
+
+def keep_alive(processes: list[multiprocessing.Process]|None=None) -> None:
+    try:
+        while True:
+            time.sleep(5)
+    except KeyboardInterrupt:
+        if processes:
+            for p in processes:
+                p.terminate()
+        print("Interrupted by user, shutting down.")
+        sys.exit(0)
