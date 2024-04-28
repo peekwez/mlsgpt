@@ -10,6 +10,8 @@ listings and use the data to generate a response.
 
 ## Installation
 
+`poetry config virtualenvs.in-project true`
+
 `cd mlsgpt && poetry install`
 
 ## ngrok setup

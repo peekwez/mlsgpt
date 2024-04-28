@@ -42,7 +42,7 @@ class DataIO(object):
         self.llm = OpenAI()
 
     def create_database(self):
-        conn = create_pg_connection()
+        conn = create_pg_connection(database=os.environ.get("POSTGRES_DB", "postgres"))
         cursor = conn.cursor()
 
         try:
