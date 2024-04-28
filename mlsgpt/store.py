@@ -162,7 +162,6 @@ class DataReader(DataIO):
             conditions.append(f"data->>'mls_number' = '{mls_number}'")
         
         where_clause = " AND ".join(conditions) if conditions else "TRUE"
-        print(where_clause)
         cmd = sql.SQL(constants.LISTINGS_QUERY).format(
             sql.Identifier(os.environ.get("POSTGRES_SCHEMA")),
             sql.SQL(where_clause),

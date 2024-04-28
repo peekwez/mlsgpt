@@ -143,7 +143,7 @@ async def get_all_listings(limit: int = 10, offset: int = 0):
     "/listings/search",
     response_model=List[models.Listing],
     summary="Search Listings",
-    description="Search listings based on specific attributes such as address or MLS number. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
+    description="Search listings based on specific attributes such as address, MLS number, unit type, days on market, number of bedrooms or washrooms. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
     operation_id="searchListings",
     dependencies=[Depends(auth.get_current_user)],
 )
@@ -230,8 +230,8 @@ def run_app():
     port = int(os.environ.get("PORT", 8000))
     log.info("API service initialized")
 
-    # public_url = ingress.start_ngrok(port)  # Start ngrok and get the public URL
-    # log.info(f"The ngrok tunnel is running at: {public_url}")
+    public_url = ingress.start_ngrok(port)  # Start ngrok and get the public URL
+    log.info(f"The ngrok tunnel is running at: {public_url}")
     try:
         # Use uvicorn to run the app. The Uvicorn server will be stopped using Ctrl+C in the terminal
         config = uvicorn.config.LOGGING_CONFIG
