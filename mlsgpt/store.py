@@ -119,6 +119,14 @@ class DataReader(DataIO):
     def __init__(self, **kwargs):
         super().__init__(mode="r", **kwargs)
 
+    # def setup(self):
+    #     cmd = sql.SQL("COUNT (*) FROM {}.results").format(
+    #         sql.Identifier(os.environ.get("POSTGRES_SCHEMA"))
+    #     )
+    #     self.cursor.execute(cmd)
+    #     count = self.cursor.fetchone()
+    #     self.total_items = count[0]
+
     def read(self, limit: int = 10, offset: int = 0):
         limit = min(limit, 20)
         cmd = sql.SQL(constants.LISTINGS_ALL).format(
@@ -129,16 +137,21 @@ class DataReader(DataIO):
         self.cursor.execute(cmd)
         return self.cursor.fetchall()
 
-    def search(self, address:str=None, mls_number:str=None, 
-        unit_type:str=None, dom_eq:float=None, 
-        dom_le:float=None, dom_ge:float=None,
+    def search(self, address:str=None,
+        mls_number:str=None, unit_type:str=None, dom_eq:float=None, 
+        dom_lte:float=None, dom_gte:float=None,
         bedrooms:str=None, washrooms:str=None,
         limit:int=10, offset:int=0):
 
         limit = min(limit, 20)
         conditions = []
+
         if address:
-            conditions.append(f"data->'listing_address'->>'street_address' ILIKE '%{address}%'")
+            conditions.append(
+                f"CONCAT(data->'listing_address'->>'street_address', ', ',"
+                f"data->'listing_address'->>'city', ', ',data->'listing_address'->>'province_or_state'"
+                f") ILIKE '%{address}%'"
+            )
 
         if unit_type:
             conditions.append(f"data->>'unit_type' ILIKE '%{unit_type}%'")
@@ -146,11 +159,11 @@ class DataReader(DataIO):
         if dom_eq:
             conditions.append(f"data->>'days_on_market' = '{dom_eq}'")
 
-        if dom_le:
-            conditions.append(f"data->>'days_on_market' <= '{dom_le}'")
+        if dom_lte:
+            conditions.append(f"data->>'days_on_market' <= '{dom_lte}'")
 
-        if dom_ge:
-            conditions.append(f"data->>'days_on_market' >= '{dom_ge}'")
+        if dom_gte:
+            conditions.append(f"data->>'days_on_market' >= '{dom_gte}'")
 
         if bedrooms:
             conditions.append(f"data->>'number_of_bedrooms' ILIKE '%{bedrooms}%'")

@@ -60,3 +60,42 @@ class Listing(BaseModel):
         if v is not None:
             return round(float(v), 4)
         return v
+
+
+class BaseSearchFilters(BaseModel):
+    limit: int = Field(
+        10, description="The number of listings to return. Maximum of 20."
+    )
+    offset: int = Field(0, description="The offset for paginating the results")
+
+
+class ListingSearchFilters(BaseSearchFilters):
+    address: str = Field(None, description="Address to use for filtering")
+    mls_number: str = Field(None, description="MLS number to filter by")
+    unit_type: str = Field(
+        None,
+        description="Unit type to filter by (e.g. condo apt, condo townhouse, detached)",
+    )
+    dom_eq: float = Field(None, description="Days on market to filter by (equal to)")
+    dom_lte: float = Field(
+        None, description="Days on market to filter by (less than or equal to)"
+    )
+    dom_gte: float = Field(
+        None, description="Days on market to filter by (greater than or equal to)"
+    )
+    bedrooms: str = Field(None, description="Number of bedrooms to filter by")
+    washrooms: str = Field(None, description="Number of washrooms to filter by")
+
+
+class ListingNaturalLanguageSearch(BaseSearchFilters):
+    query: str = Field(..., description="Natural language search query")
+    threshold: float = Field(
+        0.3,
+        description="The similarity threshold for the search. Default is 0.3",
+    )
+
+
+class ListingsResponse(BaseModel):
+    num_items: int = Field(..., description="Number of items returned")
+    items: list[Listing] = Field(..., description="List of listings returned")
+    offset: int = Field(..., description="The offset for paginating the results")

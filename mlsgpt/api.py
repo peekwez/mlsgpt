@@ -7,8 +7,8 @@ import urllib.parse
 
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, List
-from fastapi import FastAPI, Query, Request, Depends
+from typing import List
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -126,77 +126,55 @@ async def api_status():
     }
 
 
-@app.get(
+@app.post(
     "/listings",
-    response_model=List[models.Listing],
+    response_model=models.ListingsResponse,
     summary="Fetch All Listings",
     description="Retrieve all listings from the database. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
     operation_id="getAllListings",
     dependencies=[Depends(auth.get_current_user)],
 )
-async def get_all_listings(limit: int = 10, offset: int = 0):
-    listings = reader.read(limit=limit, offset=offset)
-    return [models.Listing(**listing) for listing in listings]
+async def get_all_listings(params: models.BaseSearchFilters) -> models.ListingsResponse:
+    listings = reader.read(limit=params.limit, offset=params.offset)
+    return models.ListingsResponse(
+        num_items=len(listings),
+        offset=params.offset,
+        items=[models.Listing(**listing) for listing in listings],
+    )
 
 
-@app.get(
+@app.post(
     "/listings/search",
-    response_model=List[models.Listing],
+    response_model=models.ListingsResponse,
     summary="Search Listings",
     description="Search listings based on specific attributes such as address, MLS number, unit type, days on market, number of bedrooms or washrooms. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
     operation_id="searchListings",
     dependencies=[Depends(auth.get_current_user)],
 )
-async def search_listings(
-    address: Optional[str] = Query(None, description="Address to filter by"),
-    mls_number: Optional[str] = Query(None, description="MLS number to filter by"),
-    unit_type: Optional[str] = Query(None, description="Unit type to filter by"),
-    dom_eq: Optional[float] = Query(
-        None, description="Days on market equal to filter by"
-    ),
-    dom_le: Optional[float] = Query(
-        None, description="Days on market less or equal than filter by"
-    ),
-    dom_ge: Optional[float] = Query(
-        None, description="Days on market greater or equal than filter by"
-    ),
-    bedrooms: Optional[str] = Query(
-        None, description="Number of bedrooms to filter by"
-    ),
-    washrooms: Optional[str] = Query(
-        None, description="Number of washrooms to filter by"
-    ),
-    limit: int = 10,
-    offset: int = 0,
-):
-    listings = reader.search(
-        address=address,
-        mls_number=mls_number,
-        unit_type=unit_type,
-        dom_eq=dom_eq,
-        dom_le=dom_le,
-        dom_ge=dom_ge,
-        bedrooms=bedrooms,
-        washrooms=washrooms,
-        limit=limit,
-        offset=offset,
+async def search_listings(params: models.ListingSearchFilters):
+    listings = reader.search(**params.model_dump())
+    return models.ListingsResponse(
+        num_items=len(listings),
+        offset=params.offset,
+        items=[models.Listing(**listing) for listing in listings],
     )
-    return [models.Listing(**listing) for listing in listings]
 
 
-@app.get(
+@app.post(
     "/listings/nl_search",
-    response_model=List[models.Listing],
+    response_model=models.ListingsResponse,
     summary="Natural Language Search",
     description="Uses natural language search to find listings based on a query that describes what you're looking for. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results. The threshold parameter can be used to adjust the similarity threshold for the search.",
-    operation_id="searchListingsNL",
+    operation_id="searchListingsNaturalLanguage",
     dependencies=[Depends(auth.get_current_user)],
 )
-def nl_search(query: str, threshold: float = 0.4, limit: int = 10, offset: int = 0):
-    listings = reader.nl_search(
-        query=query, threshold=threshold, limit=limit, offset=offset
+def nl_search(params: models.ListingNaturalLanguageSearch) -> models.ListingsResponse:
+    listings = reader.nl_search(**params.model_dump())
+    return models.ListingsResponse(
+        num_items=len(listings),
+        offset=params.offset,
+        items=[models.Listing(**listing) for listing in listings],
     )
-    return [models.Listing(**listing) for listing in listings]
 
 
 @app.post(
