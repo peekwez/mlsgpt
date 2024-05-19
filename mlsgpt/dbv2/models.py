@@ -89,7 +89,7 @@ class Property(BaseModel):
 class CityStats(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    City: str = Field(..., description="The city")
+    City: str = Field(..., description="The city in lower case")
     InventoryCount: int = Field(..., description="The inventory count")
     AveragePrice: float = Field(..., description="The average price")
     MedianPrice: float = Field(..., description="The median price")
@@ -107,8 +107,8 @@ class CityStats(BaseModel):
 class CityTypeStats(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    City: str = Field(..., description="The city")
-    Type: str = Field(..., description="The type")
+    City: str = Field(..., description="The city in lower case")
+    Type: str = Field(..., description="The type in lower case")
     InventoryCount: int = Field(..., description="The inventory count")
     AveragePrice: float = Field(..., description="The average price")
     MedianPrice: float = Field(..., description="The median price")
@@ -126,8 +126,8 @@ class CityTypeStats(BaseModel):
 class CityPropertyTypeStats(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    City: str = Field(..., description="The city")
-    PropertyType: str = Field(..., description="The property type")
+    City: str = Field(..., description="The city in lower case")
+    PropertyType: str = Field(..., description="The property type in lower case")
     InventoryCount: int = Field(..., description="The inventory count")
     AveragePrice: float = Field(..., description="The average price")
     MedianPrice: float = Field(..., description="The median price")
@@ -145,7 +145,7 @@ class CityPropertyTypeStats(BaseModel):
 class CityBedroomsStats(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    City: str = Field(..., description="The city")
+    City: str = Field(..., description="The city in lower case")
     BedroomsTotal: int = Field(..., description="The total number of bedrooms")
     InventoryCount: int = Field(..., description="The inventory count")
     AveragePrice: float = Field(..., description="The average price")

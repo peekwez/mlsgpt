@@ -237,7 +237,7 @@ async def get_stats_info():
     "/stats/city",
     response_model=models.CityStatsResponse,
     summary="City Statistics",
-    description="Get statistics for a specific city.",
+    description="Get statistics for a specific city. Use lower cases for all input parameters.",
     operation_id="getCityStats",
     dependencies=[Depends(auth.get_current_user)],
 )
@@ -257,7 +257,7 @@ async def get_city_stats(params: models.CityStatsRequest):
     "/stats/city-type",
     response_model=models.CityTypeStatsResponse,
     summary="City Type Statistics",
-    description="Get statistics for a specific city and property type.",
+    description="Get statistics for a specific city and property type. Use lower cases for all input parameters.",
     operation_id="getCityTypeStats",
     dependencies=[Depends(auth.get_current_user)],
 )
@@ -277,7 +277,7 @@ async def get_city_type_stats(params: models.CityTypeStatsRequest):
     "/stats/city-property-type",
     response_model=models.CityPropertyTypeStatsResponse,
     summary="City Property Type Statistics",
-    description="Get statistics for a specific city and property type.",
+    description="Get statistics for a specific city and property type. Use lower cases for all input parameters.",
     operation_id="getCityPropertyTypeStats",
     dependencies=[Depends(auth.get_current_user)],
 )
@@ -299,7 +299,7 @@ async def get_city_property_type_stats(params: models.CityPropertyTypeStatsReque
     "/stats/city-bedrooms-total",
     response_model=models.CityBedroomsStatsResponse,
     summary="City Bedrooms Statistics",
-    description="Get statistics for a specific city and number of bedrooms.",
+    description="Get statistics for a specific city and number of bedrooms. Use lower cases for all input parameters.",
     operation_id="getCityBedroomsStats",
     dependencies=[Depends(auth.get_current_user)],
 )
