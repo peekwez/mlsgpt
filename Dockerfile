@@ -21,4 +21,4 @@ RUN poetry config virtualenvs.create false && poetry install --compile
 RUN pip install --upgrade certifi
 
 EXPOSE 80
-CMD ["dotenv", "--file=.env", "run", "mlsgpt", "run-services"]
+CMD ["dotenv", "--file=.env", "run", "mlsgpt", "run-services", "--api-version=v2", "--ngrok"]
