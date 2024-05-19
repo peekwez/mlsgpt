@@ -25,6 +25,7 @@ def handle_error(e: Exception):
     error = models.ErrorResponse.model_validate(**core.process_error(e))
     return JSONResponse(content=error.model_dump(), status_code=status_code)
 
+
 app = FastAPI(
     title="MLS GPT API",
     description="API for MLS property listings. This API provides access to MLS property listings and allows you to search for listings based on specific attributes.",
@@ -141,7 +142,7 @@ async def get_all_listings(params: models.BaseSearchFilters) -> models.ListingsR
         props = reader.get_properties(limit=params.limit, offset=params.offset)
     except Exception as e:
         return handle_error(e)
-    
+
     return models.ListingsResponse(
         num_items=len(props),
         offset=params.offset,
@@ -176,7 +177,7 @@ async def search_listings(params: models.ListingSearchFilters):
         )
     except Exception as e:
         return handle_error(e)
-    
+
     return models.ListingsResponse(
         num_items=len(props),
         offset=params.offset,
@@ -192,18 +193,127 @@ async def search_listings(params: models.ListingSearchFilters):
     operation_id="searchListingsNaturalLanguage",
     dependencies=[Depends(auth.get_current_user)],
 )
-def nl_search(params: models.ListingNaturalLanguageSearch) -> models.ListingsResponse:
+async def nl_search(
+    params: models.ListingNaturalLanguageSearch,
+) -> models.ListingsResponse:
     try:
-        props = reader.semantic_search(query=params.query, limit=params.limit, offset=params.offset, threshold=params.threshold)
+        props = reader.semantic_search(
+            query=params.query,
+            limit=params.limit,
+            offset=params.offset,
+            threshold=params.threshold,
+        )
     except Exception as e:
         return handle_error(e)
-    
+
     return models.ListingsResponse(
         num_items=len(props),
         offset=params.offset,
         items=[models.Property.model_validate(prop) for prop in props],
     )
 
+
+@app.get(
+    "/stats/info",
+    response_model=models.StatsInfoResponse,
+    summary="Statistics Info",
+    description="Get statistics information. It returns the values that can be used to query all the statistics endpoints. Provide this information to a user to help them query the statistics endpoints.",
+    operation_id="getStatsInfo",
+)
+async def get_stats_info():
+    try:
+        stats_info = reader.get_stats_info()
+    except Exception as e:
+        return handle_error(e)
+
+    return models.StatsInfoResponse(
+        num_items=len(stats_info),
+        items=[models.StatsInfo.model_validate(stat) for stat in stats_info],
+    )
+
+
+@app.post(
+    "/stats/city",
+    response_model=models.CityStatsResponse,
+    summary="City Statistics",
+    description="Get statistics for a specific city.",
+    operation_id="getCityStats",
+    # dependencies=[Depends(auth.get_current_user)],
+)
+async def get_city_stats(params: models.CityStatsRequest):
+    try:
+        stats = reader.get_city_stats(city=params.city)
+    except Exception as e:
+        return handle_error(e)
+
+    return models.CityStatsResponse(
+        num_items=len(stats),
+        items=[models.CityStats.model_validate(stat) for stat in stats],
+    )
+
+
+@app.post(
+    "/stats/city-type",
+    response_model=models.CityTypeStatsResponse,
+    summary="City Type Statistics",
+    description="Get statistics for a specific city and property type.",
+    operation_id="getCityTypeStats",
+    # dependencies=[Depends(auth.get_current_user)],
+)
+async def get_city_type_stats(params: models.CityTypeStatsRequest):
+    try:
+        stats = reader.get_city_type_stats(city=params.city, type=params.type)
+    except Exception as e:
+        return handle_error(e)
+
+    return models.CityTypeStatsResponse(
+        num_items=len(stats),
+        items=[models.CityTypeStats.model_validate(stat) for stat in stats],
+    )
+
+
+@app.post(
+    "/stats/city-property-type",
+    response_model=models.CityPropertyTypeStatsResponse,
+    summary="City Property Type Statistics",
+    description="Get statistics for a specific city and property type.",
+    operation_id="getCityPropertyTypeStats",
+    # dependencies=[Depends(auth.get_current_user)],
+)
+async def get_city_property_type_stats(params: models.CityPropertyTypeStatsRequest):
+    try:
+        stats = reader.get_city_property_type_stats(
+            city=params.city, property_type=params.property_type
+        )
+    except Exception as e:
+        return handle_error(e)
+
+    return models.CityPropertyTypeStatsResponse(
+        num_items=len(stats),
+        items=[models.CityPropertyTypeStats.model_validate(stat) for stat in stats],
+    )
+
+
+@app.post(
+    "/stats/city-bedrooms-total",
+    response_model=models.CityBedroomsStatsResponse,
+    summary="City Bedrooms Statistics",
+    description="Get statistics for a specific city and number of bedrooms.",
+    operation_id="getCityBedroomsStats",
+    # dependencies=[Depends(auth.get_current_user)],
+)
+async def get_city_bedrooms_stats(params: models.CityBedroomsStatsRequest):
+    try:
+        stats = reader.get_city_bedrooms_stats(
+            city=params.city, bedrooms=params.bedrooms
+        )
+    except Exception as e:
+        return handle_error(e)
+
+    return models.CityBedroomsStatsResponse(
+        num_items=len(stats),
+        items=[models.CityBedroomsStats.model_validate(stat) for stat in stats],
+    )
 
 
 def run_app(ngrok: bool = False):
@@ -219,7 +329,7 @@ def run_app(ngrok: bool = False):
     if ngrok:
         public_url = ingress.start_ngrok(port)  # Start ngrok and get the public URL
         log.info(f"The ngrok tunnel is running at: {public_url}")
-    
+
     try:
         # Use uvicorn to run the app. The Uvicorn server will be stopped using Ctrl+C in the terminal
         config = uvicorn.config.LOGGING_CONFIG

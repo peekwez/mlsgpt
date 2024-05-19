@@ -1,5 +1,7 @@
 from typing import List
 from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
+
 
 class PropertyRooms(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -15,13 +17,15 @@ class PropertyRooms(BaseModel):
 
 class Property(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     PostID: int | None = Field(..., description="Post ID")
     ListingID: int | None = Field(..., description="Listing ID")
     LastUpdated: str | None = Field(..., description="Last Updated")
     Latitude: str | None = Field(..., description="Latitude")
     Longitude: str | None = Field(..., description="Longitude")
-    AmenitiesNearBy: str | None = Field(..., description="The amenities near the property")
+    AmenitiesNearBy: str | None = Field(
+        ..., description="The amenities near the property"
+    )
     CommunityFeatures: str | None = Field(..., description="Community Features")
     Features: str | None = Field(..., description="Features")
     Lease: float | None = Field(..., description="Lease")
@@ -49,7 +53,9 @@ class Property(BaseModel):
     BasementFeatures: str | None = Field(..., description="Basement Features")
     BasementType: str | None = Field(..., description="Basement Type")
     ConstructedDate: str | None = Field(..., description="Constructed Date")
-    ConstructionStyleAttachment: str | None = Field(..., description="Construction Style Attachment")
+    ConstructionStyleAttachment: str | None = Field(
+        ..., description="Construction Style Attachment"
+    )
     CoolingType: str | None = Field(..., description="Cooling Type")
     ExteriorFinish: str | None = Field(..., description="Exterior Finish")
     FireplacePresent: str | None = Field(..., description="Fireplace Present")
@@ -80,11 +86,94 @@ class Property(BaseModel):
     Rooms: List[PropertyRooms] | None = Field(..., description="Rooms")
 
 
+class CityStats(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    City: str = Field(..., description="The city")
+    InventoryCount: int = Field(..., description="The inventory count")
+    AveragePrice: float = Field(..., description="The average price")
+    MedianPrice: float = Field(..., description="The median price")
+    MinimumPrice: float = Field(..., description="The minimum price")
+    MaximumPrice: float = Field(..., description="The maximum price")
+    AverageDaysOnMarket: float = Field(..., description="The average days on market")
+    MedianDaysOnMarket: float = Field(..., description="The median days on market")
+    MinimumDaysOnMarket: float = Field(..., description="The minimum days on market")
+    MaximumDaysOnMarket: float = Field(..., description="The maximum days on market")
+    AveragePricePerSqft: float | None = Field(
+        ..., description="The average price per square foot"
+    )
+
+
+class CityTypeStats(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    City: str = Field(..., description="The city")
+    Type: str = Field(..., description="The type")
+    InventoryCount: int = Field(..., description="The inventory count")
+    AveragePrice: float = Field(..., description="The average price")
+    MedianPrice: float = Field(..., description="The median price")
+    MinimumPrice: float = Field(..., description="The minimum price")
+    MaximumPrice: float = Field(..., description="The maximum price")
+    AverageDaysOnMarket: float = Field(..., description="The average days on market")
+    MedianDaysOnMarket: float = Field(..., description="The median days on market")
+    MinimumDaysOnMarket: float = Field(..., description="The minimum days on market")
+    MaximumDaysOnMarket: float = Field(..., description="The maximum days on market")
+    AveragePricePerSqft: float | None = Field(
+        ..., description="The average price per square foot"
+    )
+
+
+class CityPropertyTypeStats(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    City: str = Field(..., description="The city")
+    PropertyType: str = Field(..., description="The property type")
+    InventoryCount: int = Field(..., description="The inventory count")
+    AveragePrice: float = Field(..., description="The average price")
+    MedianPrice: float = Field(..., description="The median price")
+    MinimumPrice: float = Field(..., description="The minimum price")
+    MaximumPrice: float = Field(..., description="The maximum price")
+    AverageDaysOnMarket: float = Field(..., description="The average days on market")
+    MedianDaysOnMarket: float = Field(..., description="The median days on market")
+    MinimumDaysOnMarket: float = Field(..., description="The minimum days on market")
+    MaximumDaysOnMarket: float = Field(..., description="The maximum days on market")
+    AveragePricePerSqft: float | None = Field(
+        ..., description="The average price per square foot"
+    )
+
+
+class CityBedroomsStats(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    City: str = Field(..., description="The city")
+    BedroomsTotal: int = Field(..., description="The total number of bedrooms")
+    InventoryCount: int = Field(..., description="The inventory count")
+    AveragePrice: float = Field(..., description="The average price")
+    MedianPrice: float = Field(..., description="The median price")
+    MinimumPrice: float = Field(..., description="The minimum price")
+    MaximumPrice: float = Field(..., description="The maximum price")
+    AverageDaysOnMarket: float = Field(..., description="The average days on market")
+    MedianDaysOnMarket: float = Field(..., description="The median days on market")
+    MinimumDaysOnMarket: float = Field(..., description="The minimum days on market")
+    MaximumDaysOnMarket: float = Field(..., description="The maximum days on market")
+    AveragePricePerSqft: float | None = Field(
+        ..., description="The average price per square foot"
+    )
+
+
+class StatsInfo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    Attribute: str = Field(..., description="Name")
+    Values: list[str] = Field(..., description="Values")
+
+
 class BaseSearchFilters(BaseModel):
     limit: int = Field(
         20, description="The number of listings to return. Maximum of 20."
     )
     offset: int = Field(0, description="The offset for paginating the results")
+
 
 class ListingSearchFilters(BaseSearchFilters):
     address: str = Field(None, description="Address to use for filtering")
@@ -120,3 +209,57 @@ class ListingsResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error name")
     message: str = Field(..., description="Error message")
+
+
+class CityStatsRequest(BaseModel):
+    city: list[str] = Field(..., description="A list of cities to fetch statistics for")
+
+
+class CityStatsResponse(BaseModel):
+    num_items: int = Field(..., description="Number of items returned")
+    items: list[CityStats] = Field(..., description="List of city statistics returned")
+
+
+class CityTypeStatsRequest(BaseModel):
+    city: list[str] = Field(..., description="A list of cities to fetch statistics for")
+    type: list[str] = Field(..., description="A list of types to fetch statistics for")
+
+
+class CityTypeStatsResponse(BaseModel):
+    num_items: int = Field(..., description="Number of items returned")
+    items: list[CityTypeStats] = Field(
+        ..., description="List of city type statistics returned"
+    )
+
+
+class CityPropertyTypeStatsRequest(BaseModel):
+    city: list[str] = Field(..., description="A list of cities to fetch statistics for")
+    property_type: list[str] = Field(
+        ..., description="A list of property types to fetch statistics for"
+    )
+
+
+class CityPropertyTypeStatsResponse(BaseModel):
+    num_items: int = Field(..., description="Number of items returned")
+    items: list[CityPropertyTypeStats] = Field(
+        ..., description="List of city property type statistics returned"
+    )
+
+
+class CityBedroomsStatsRequest(BaseModel):
+    city: list[str] = Field(..., description="A list of cities to fetch statistics for")
+    bedrooms: list[int] = Field(
+        ..., description="A list of bedrooms to fetch statistics for"
+    )
+
+
+class CityBedroomsStatsResponse(BaseModel):
+    num_items: int = Field(..., description="Number of items returned")
+    items: list[CityBedroomsStats] = Field(
+        ..., description="List of city bedrooms statistics returned"
+    )
+
+
+class StatsInfoResponse(BaseModel):
+    num_items: int = Field(..., description="Number of items returned")
+    items: list[StatsInfo] = Field(..., description="List of stats info returned")

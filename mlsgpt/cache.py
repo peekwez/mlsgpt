@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException
 
 from mlsgpt.db import models
+from mlsgpt.dbv2 import store
 
 CACHE_EXPIRY_MINUTES = 30
 GOOGLE_PROFILE_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
@@ -12,6 +13,7 @@ GOOGLE_PROFILE_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 class UserInfoCache:
     def __init__(self):
         self.cache = {}
+        self.add_user_fn = store.add_user_to_db_function()
         self.cache_duration = timedelta(minutes=CACHE_EXPIRY_MINUTES)
 
     async def get_user_info(self, access_token: str):
@@ -31,6 +33,7 @@ class UserInfoCache:
                     name=user_info["name"],
                     email_verified=user_info["email_verified"],
                 )
+                self.add_user_fn(user)
 
                 # Store in cache with expiry time
                 self.cache[access_token] = {

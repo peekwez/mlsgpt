@@ -1,5 +1,15 @@
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column, Integer, String, Numeric, LargeBinary, ForeignKey, DateTime
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Numeric,
+    LargeBinary,
+    ForeignKey,
+    DateTime,
+    Boolean,
+    ARRAY,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from pgvector.sqlalchemy import Vector
 
@@ -7,8 +17,8 @@ Base = declarative_base()
 
 
 class Property(Base):
-    __table_args__ = {'schema': 'rsbr'}
-    __tablename__ = 'property'
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "property"
 
     property_id = Column(Integer, primary_key=True)
     PostID = Column(Integer)
@@ -78,12 +88,13 @@ class Property(Base):
     # Agents = Column(String, index=True)
     # Board = Column(String, index=True)
 
+
 class PropertyRooms(Base):
-    __table_args__ = {'schema': 'rsbr'}
-    __tablename__ = 'property_rooms'
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "property_rooms"
 
     room_id = Column(Integer, primary_key=True)
-    ListingID = Column(Integer, ForeignKey('rsbr.property.ListingID'))
+    ListingID = Column(Integer, ForeignKey("rsbr.property.ListingID"))
     Type = Column(String)
     Width = Column(String)
     Length = Column(String)
@@ -94,15 +105,109 @@ class PropertyRooms(Base):
 
 
 class Embedding(Base):
-    __table_args__ = {'schema': 'rsbr'}
-    __tablename__ = 'embedding'
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "embedding"
 
     id = Column(Integer, primary_key=True)
-    ListingID = Column(Integer, ForeignKey('rsbr.property.ListingID'))
+    ListingID = Column(Integer, ForeignKey("rsbr.property.ListingID"))
     PublicRemarks = Column(String)
     Embedding = Column(Vector(1536))
     CreatedAt = Column(DateTime)
     Property = relationship("Property")
+
+
+class CityStats(Base):
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "city_stats"
+
+    id = Column(Integer, primary_key=True)
+    City = Column(String, index=True)
+    InventoryCount = Column(Integer)
+    AveragePrice = Column(Numeric(38, 2))
+    MedianPrice = Column(Numeric(38, 2))
+    MinimumPrice = Column(Numeric(38, 2))
+    MaximumPrice = Column(Numeric(38, 2))
+    AverageDaysOnMarket = Column(Numeric(38, 2))
+    MedianDaysOnMarket = Column(Numeric(38, 2))
+    MinimumDaysOnMarket = Column(Numeric(38, 2))
+    MaximumDaysOnMarket = Column(Numeric(38, 2))
+    AveragePricePerSqft = Column(Numeric(38, 2))
+
+
+class CityTypeStats(Base):
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "city_type_stats"
+
+    id = Column(Integer, primary_key=True)
+    City = Column(String, index=True)
+    Type = Column(String)
+    InventoryCount = Column(Integer)
+    AveragePrice = Column(Numeric(38, 2))
+    MedianPrice = Column(Numeric(38, 2))
+    MinimumPrice = Column(Numeric(38, 2))
+    MaximumPrice = Column(Numeric(38, 2))
+    AverageDaysOnMarket = Column(Numeric(38, 2))
+    MedianDaysOnMarket = Column(Numeric(38, 2))
+    MinimumDaysOnMarket = Column(Numeric(38, 2))
+    MaximumDaysOnMarket = Column(Numeric(38, 2))
+    AveragePricePerSqft = Column(Numeric(38, 2))
+
+
+class CityPropertyTypeStats(Base):
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "city_property_type_stats"
+
+    id = Column(Integer, primary_key=True)
+    City = Column(String, index=True)
+    PropertyType = Column(String)
+    InventoryCount = Column(Integer)
+    AveragePrice = Column(Numeric(38, 2))
+    MedianPrice = Column(Numeric(38, 2))
+    MinimumPrice = Column(Numeric(38, 2))
+    MaximumPrice = Column(Numeric(38, 2))
+    AverageDaysOnMarket = Column(Numeric(38, 2))
+    MedianDaysOnMarket = Column(Numeric(38, 2))
+    MinimumDaysOnMarket = Column(Numeric(38, 2))
+    MaximumDaysOnMarket = Column(Numeric(38, 2))
+    AveragePricePerSqft = Column(Numeric(38, 2))
+
+
+class CityBedroomsStats(Base):
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "city_bedrooms_stats"
+
+    id = Column(Integer, primary_key=True)
+    City = Column(String, index=True)
+    BedroomsTotal = Column(Integer)
+    InventoryCount = Column(Integer)
+    AveragePrice = Column(Numeric(38, 2))
+    MedianPrice = Column(Numeric(38, 2))
+    MinimumPrice = Column(Numeric(38, 2))
+    MaximumPrice = Column(Numeric(38, 2))
+    AverageDaysOnMarket = Column(Numeric(38, 2))
+    MedianDaysOnMarket = Column(Numeric(38, 2))
+    MinimumDaysOnMarket = Column(Numeric(38, 2))
+    MaximumDaysOnMarket = Column(Numeric(38, 2))
+    AveragePricePerSqft = Column(Numeric(38, 2))
+
+
+class User(Base):
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    Email = Column(String, index=True)
+    Name = Column(String)
+    EmailVerified = Column(Boolean)
+
+
+class StatsInfo(Base):
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "stats_info"
+
+    id = Column(Integer, primary_key=True)
+    Attribute = Column(String)
+    Values = Column(ARRAY(String))
 
 
 # class Board(Base):
