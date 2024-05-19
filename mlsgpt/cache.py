@@ -3,7 +3,7 @@ from rich.pretty import pprint as pp
 from datetime import datetime, timedelta
 from fastapi import HTTPException
 
-from mlsgpt import models
+from mlsgpt.db import models
 
 CACHE_EXPIRY_MINUTES = 30
 GOOGLE_PROFILE_URL = "https://www.googleapis.com/oauth2/v3/userinfo"

@@ -1,31 +1,33 @@
 import os
 import uvicorn
 
-import boto3
 import httpx
 import urllib.parse
 
 from pathlib import Path
 from datetime import datetime
-from typing import List
-from fastapi import FastAPI, Request, Depends
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, Depends, status
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 
 
-from mlsgpt import logger, auth, ingress, tasks, core
-from mlsgpt.db import models, store
+from mlsgpt import logger, auth, ingress, core
+from mlsgpt.dbv2 import models, store
 
 ASSETS_PATH = Path(__file__).parent.parent / "assets"
 PRIVACY_HTML = ASSETS_PATH / "privacy.html"
 
 
+def handle_error(e: Exception):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    error = models.ErrorResponse.model_validate(**core.process_error(e))
+    return JSONResponse(content=error.model_dump(), status_code=status_code)
 
 app = FastAPI(
     title="MLS GPT API",
-    description="API for MLS property listings. This API provides access to MLS property listings and allows you to search for listings based on specific attributes. You can also upload MLS files to extract data and add it to the database.",
+    description="API for MLS property listings. This API provides access to MLS property listings and allows you to search for listings based on specific attributes.",
     servers=[
         {"url": "https://api.mlsgpt.docex.io", "description": "Production server"},
     ],
@@ -39,7 +41,6 @@ app = FastAPI(
     swagger_ui_oauth2_redirect_url="/authorize",
 )
 
-sqs = boto3.client("sqs")
 reader: store.DataReader | None = None
 
 app.mount("/static", StaticFiles(directory=ASSETS_PATH), name="static")
@@ -136,11 +137,15 @@ async def api_status():
     dependencies=[Depends(auth.get_current_user)],
 )
 async def get_all_listings(params: models.BaseSearchFilters) -> models.ListingsResponse:
-    listings = reader.read(limit=params.limit, offset=params.offset)
+    try:
+        props = reader.get_properties(limit=params.limit, offset=params.offset)
+    except Exception as e:
+        return handle_error(e)
+    
     return models.ListingsResponse(
-        num_items=len(listings),
+        num_items=len(props),
         offset=params.offset,
-        items=[models.Listing(**listing) for listing in listings],
+        items=[models.Property.model_validate(prop) for prop in props],
     )
 
 
@@ -153,11 +158,29 @@ async def get_all_listings(params: models.BaseSearchFilters) -> models.ListingsR
     dependencies=[Depends(auth.get_current_user)],
 )
 async def search_listings(params: models.ListingSearchFilters):
-    listings = reader.search(**params.model_dump())
+    try:
+        props = reader.search(
+            limit=params.limit,
+            offset=params.offset,
+            StreetAddress=params.address,
+            City=params.city,
+            PostalCode=params.postal_code,
+            Province=params.province,
+            Type=params.type,
+            BedroomsTotal=params.bedrooms,
+            BathroomTotal=params.washrooms,
+            MaxPrice=params.max_price,
+            MinPrice=params.min_price,
+            MaxLease=params.max_lease,
+            MinLease=params.min_lease,
+        )
+    except Exception as e:
+        return handle_error(e)
+    
     return models.ListingsResponse(
-        num_items=len(listings),
+        num_items=len(props),
         offset=params.offset,
-        items=[models.Listing(**listing) for listing in listings],
+        items=[models.Property.model_validate(prop) for prop in props],
     )
 
 
@@ -170,33 +193,17 @@ async def search_listings(params: models.ListingSearchFilters):
     dependencies=[Depends(auth.get_current_user)],
 )
 def nl_search(params: models.ListingNaturalLanguageSearch) -> models.ListingsResponse:
-    listings = reader.nl_search(**params.model_dump())
+    try:
+        props = reader.semantic_search(query=params.query, limit=params.limit, offset=params.offset, threshold=params.threshold)
+    except Exception as e:
+        return handle_error(e)
+    
     return models.ListingsResponse(
-        num_items=len(listings),
+        num_items=len(props),
         offset=params.offset,
-        items=[models.Listing(**listing) for listing in listings],
+        items=[models.Property.model_validate(prop) for prop in props],
     )
 
-
-@app.post(
-    "/listings/extract",
-    response_model=models.Message,
-    summary="Extract Data",
-    description="Extract data from the uploaded MLS file upload by the user. A maximum of 2 files can be uploaded at a time.",
-    operation_id="extractData",
-    dependencies=[Depends(auth.get_current_user)],
-)
-async def extract_data(req: models.OpenAIFileIdRefs):
-    for file in req.openaiFileIdRefs:
-        sqs.send_message(
-            QueueUrl=tasks.file_queue_url,
-            MessageBody=file.model_dump_json(),
-        )
-
-    return models.Message(
-        OK=True,
-        message="Batch extraction request submitted. This will take up to 10-20 minutes to complete.",
-    )
 
 
 def run_app(ngrok: bool = False):

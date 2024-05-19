@@ -2,7 +2,8 @@ import json
 import time
 import boto3
 from typing import Callable
-from mlsgpt import core, store, logger, models
+from mlsgpt import core, logger
+from mlsgpt.db import models, store
 
 
 DELAY_SECONDS = 120

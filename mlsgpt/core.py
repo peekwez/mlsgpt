@@ -6,7 +6,6 @@ import httpx
 import base64
 import tempfile
 import requests
-import threading
 import multiprocessing
 
 
@@ -137,3 +136,10 @@ def keep_alive(processes: list[multiprocessing.Process]|None=None) -> None:
                 p.terminate()
         print("Interrupted by user, shutting down.")
         sys.exit(0)
+
+
+def process_error(exc)->dict[str,str]:
+    {
+        "error": str(exc),
+        "message": str(exc),
+    }
