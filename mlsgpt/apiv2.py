@@ -219,6 +219,7 @@ async def nl_search(
     summary="Statistics Info",
     description="Get statistics information. It returns the values that can be used to query all the statistics endpoints. Provide this information to a user to help them query the statistics endpoints.",
     operation_id="getStatsInfo",
+    dependencies=[Depends(auth.get_current_user)],
 )
 async def get_stats_info():
     try:
@@ -238,7 +239,7 @@ async def get_stats_info():
     summary="City Statistics",
     description="Get statistics for a specific city.",
     operation_id="getCityStats",
-    # dependencies=[Depends(auth.get_current_user)],
+    dependencies=[Depends(auth.get_current_user)],
 )
 async def get_city_stats(params: models.CityStatsRequest):
     try:
@@ -258,7 +259,7 @@ async def get_city_stats(params: models.CityStatsRequest):
     summary="City Type Statistics",
     description="Get statistics for a specific city and property type.",
     operation_id="getCityTypeStats",
-    # dependencies=[Depends(auth.get_current_user)],
+    dependencies=[Depends(auth.get_current_user)],
 )
 async def get_city_type_stats(params: models.CityTypeStatsRequest):
     try:
@@ -278,7 +279,7 @@ async def get_city_type_stats(params: models.CityTypeStatsRequest):
     summary="City Property Type Statistics",
     description="Get statistics for a specific city and property type.",
     operation_id="getCityPropertyTypeStats",
-    # dependencies=[Depends(auth.get_current_user)],
+    dependencies=[Depends(auth.get_current_user)],
 )
 async def get_city_property_type_stats(params: models.CityPropertyTypeStatsRequest):
     try:
@@ -300,7 +301,7 @@ async def get_city_property_type_stats(params: models.CityPropertyTypeStatsReque
     summary="City Bedrooms Statistics",
     description="Get statistics for a specific city and number of bedrooms.",
     operation_id="getCityBedroomsStats",
-    # dependencies=[Depends(auth.get_current_user)],
+    dependencies=[Depends(auth.get_current_user)],
 )
 async def get_city_bedrooms_stats(params: models.CityBedroomsStatsRequest):
     try:
