@@ -190,10 +190,10 @@ async def search_listings(params: models.ListingSearchFilters):
     response_model=models.ListingsResponse,
     summary="Natural Language Search",
     description="Uses natural language search to find listings based on a query that describes what you're looking for. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results. The threshold parameter can be used to adjust the similarity threshold for the search.",
-    operation_id="searchListingsNaturalLanguage",
+    operation_id="semanticSearchListings",
     dependencies=[Depends(auth.get_current_user)],
 )
-async def nl_search(
+async def semantic_search(
     params: models.ListingNaturalLanguageSearch,
 ) -> models.ListingsResponse:
     try:
