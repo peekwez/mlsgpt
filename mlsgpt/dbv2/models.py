@@ -1,6 +1,5 @@
 from typing import List
 from pydantic import BaseModel, Field, ConfigDict
-from pydantic import BaseModel, Field
 
 
 class PropertyRooms(BaseModel):
@@ -170,22 +169,37 @@ class StatsInfo(BaseModel):
 
 class BaseSearchFilters(BaseModel):
     limit: int = Field(
-        20, description="The number of listings to return. Maximum of 20."
+        30,
+        description="The number of listings to return. The maximum is 30 listings. You can use the offset to control the page to show",
     )
-    offset: int = Field(0, description="The offset for paginating the results")
+    offset: int = Field(
+        0,
+        description="The offset for paginating the results. Default is 0. Use this to paginate the results.",
+    )
 
 
 class ListingSearchFilters(BaseSearchFilters):
-    address: str = Field(None, description="Address to use for filtering")
-    city: str = Field(None, description="City to use for filtering")
-    postal_code: str = Field(None, description="Postal code to use for filtering")
-    province: str = Field(None, description="Province to use for filtering")
-    type: str = Field(
-        None,
-        description="Unit type to filter by (e.g. condo apt, condo townhouse, detached)",
+    address: list[str] = Field(
+        None, description="A list of addresses to use for filtering"
     )
-    bedrooms: str = Field(None, description="Number of bedrooms to filter by")
-    washrooms: str = Field(None, description="Number of washrooms to filter by")
+    city: list[str] = Field(None, description="A list of cities to use for filtering")
+    postal_code: list[str] = Field(
+        None,
+        description="A list of postal codes to use for filtering (use FSA in most cases)",
+    )
+    province: list[str] = Field(
+        None, description="A list of provinces to use for filtering"
+    )
+    type: list[str] = Field(
+        None,
+        description="A list of unit types to filter by (e.g. condo apt, condo townhouse, detached)",
+    )
+    bedrooms: list[int] = Field(
+        None, description="A list of number of bedrooms to filter by"
+    )
+    washrooms: list[int] = Field(
+        None, description="A list of number of washrooms to filter by"
+    )
     min_price: float = Field(None, description="Minimum price to filter by")
     max_price: float = Field(None, description="Maximum price to filter by")
     min_lease: float = Field(None, description="Minimum lease to filter by")

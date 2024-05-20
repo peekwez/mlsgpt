@@ -1,12 +1,13 @@
 import os
 from openai import OpenAI
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, or_, text
 
 from mlsgpt.dbv2 import schema
 from mlsgpt.db import models
 
 DSN = "postgresql://{}:{}@{}:{}/{}"
+LIMIT = 30
 
 
 def create_session():
@@ -45,15 +46,16 @@ class DataReader(object):
             self.session.query(schema.Property).filter_by(ListingID=listing_id).first()
         )
 
-    def get_properties(self, limit: int = 20, offset: int = 0):
+    def get_properties(self, limit: int = LIMIT, offset: int = 0):
         return (
             self.session.query(schema.Property)
-            .limit(min(limit, 20))
+            .order_by(text('CAST("LastUpdated" AS TIMESTAMP) DESC'))
+            .limit(min(limit, 30))
             .offset(offset)
             .all()
         )
 
-    def search(self, limit: int = 20, offset: int = 0, **kwargs):
+    def search(self, limit: int = LIMIT, offset: int = 0, **kwargs):
         query = self.session.query(schema.Property)
 
         for key, value in kwargs.items():
@@ -70,31 +72,59 @@ class DataReader(object):
                 case "MinLease":
                     condition = schema.Property.Lease >= value
                 case "Address":
-                    condition = schema.Property.StreetAddress.ilike(f"%{value}%")
+                    condition = or_(
+                        *[
+                            schema.Property.StreetAddress.ilike(f"%{address}%")
+                            for address in value
+                        ]
+                    )
                 case "City":
-                    condition = schema.Property.City.ilike(f"%{value}%")
+                    condition = or_(
+                        *[schema.Property.City.ilike(f"%{city}%") for city in value]
+                    )
                 case "PostalCode":
-                    condition = schema.Property.PostalCode.ilike(f"%{value}%")
+                    condition = or_(
+                        *[
+                            schema.Property.PostalCode.ilike(f"%{post_code}%")
+                            for post_code in value
+                        ]
+                    )
                 case "Province":
-                    condition = schema.Property.Province.ilike(f"%{value}%")
+                    condition = or_(
+                        *[
+                            schema.Property.Province.ilike(f"%{province}%")
+                            for province in value
+                        ]
+                    )
                 case "Type":
-                    condition = schema.Property.Type.ilike(f"%{value}%")
+                    condition = or_(
+                        *[schema.Property.Type.ilike(f"%{type}%") for type in value]
+                    )
                 case "BedroomsTotal":
-                    condition = schema.Property.BedroomsTotal == value
+                    condition = or_(
+                        *[
+                            schema.Property.BedroomsTotal == bedrooms
+                            for bedrooms in value
+                        ]
+                    )
                 case "BathroomTotal":
-                    condition = schema.Property.BathroomTotal == value
+                    condition = or_(
+                        *[
+                            schema.Property.BathroomTotal == bathrooms
+                            for bathrooms in value
+                        ]
+                    )
 
             query = query.filter(condition)
-
         return (
-            query.order_by(schema.Property.LastUpdated.desc())
-            .limit(min(limit, 20))
+            query.order_by(text('CAST("LastUpdated" AS TIMESTAMP) DESC'))
+            .limit(min(limit, LIMIT))
             .offset(offset)
             .all()
         )
 
     def semantic_search(
-        self, query: str, limit: int = 20, offset: int = 0, threshold: float = 0.45
+        self, query: str, limit: int = LIMIT, offset: int = 0, threshold: float = 0.45
     ):
         vector = self.embed(query)
         return (
@@ -103,7 +133,7 @@ class DataReader(object):
             .filter(
                 1.0 - schema.Embedding.Embedding.cosine_distance(vector) >= threshold
             )
-            .order_by(schema.Property.LastUpdated.desc())
+            .order_by(text('CAST("LastUpdated" AS TIMESTAMP) DESC'))
             .limit(min(limit, 20))
             .offset(offset)
             .all()
@@ -113,33 +143,56 @@ class DataReader(object):
         return self.session.query(schema.StatsInfo).all()
 
     def get_city_stats(self, city: list[str]):
-        return (
-            self.session.query(schema.CityStats)
-            .filter(schema.CityStats.City.in_(city))
-            .all()
+        city_condition = or_(
+            *[schema.CityStats.City.ilike(f"%{city}%") for city in city]
         )
+        return self.session.query(schema.CityStats).filter(city_condition).all()
 
     def get_city_type_stats(self, city: list[str], type: list[str]):
+        city_condition = or_(
+            *[schema.CityTypeStats.City.ilike(f"%{city}%") for city in city]
+        )
+        type_condition = or_(
+            *[schema.CityTypeStats.Type.ilike(f"%{type}%") for type in type]
+        )
         return (
             self.session.query(schema.CityTypeStats)
-            .filter(schema.CityTypeStats.City.in_(city))
-            .filter(schema.CityTypeStats.Type.in_(type))
+            .filter(city_condition)
+            .filter(type_condition)
             .all()
         )
 
     def get_city_property_type_stats(self, city: list[str], property_type: list[str]):
+        city_condition = or_(
+            *[schema.CityPropertyTypeStats.City.ilike(f"%{city}%") for city in city]
+        )
+        property_type_condition = or_(
+            *[
+                schema.CityPropertyTypeStats.PropertyType.ilike(f"%{type}%")
+                for type in property_type
+            ]
+        )
         return (
             self.session.query(schema.CityPropertyTypeStats)
-            .filter(schema.CityPropertyTypeStats.City.in_(city))
-            .filter(schema.CityPropertyTypeStats.PropertyType.in_(property_type))
+            .filter(city_condition)
+            .filter(property_type_condition)
             .all()
         )
 
     def get_city_bedrooms_stats(self, city: list[str], bedrooms: list[str]):
+        city_condition = or_(
+            *[schema.CityBedroomsStats.City.ilike(f"%{city}%") for city in city]
+        )
+        bedrooms_condition = or_(
+            *[
+                schema.CityBedroomsStats.BedroomsTotal == bedrooms
+                for bedrooms in bedrooms
+            ]
+        )
         return (
             self.session.query(schema.CityBedroomsStats)
-            .filter(schema.CityBedroomsStats.City.in_(city))
-            .filter(schema.CityBedroomsStats.BedroomsTotal.in_(bedrooms))
+            .filter(city_condition)
+            .filter(bedrooms_condition)
             .all()
         )
 

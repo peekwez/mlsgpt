@@ -156,7 +156,7 @@ async def get_all_listings(params: models.BaseSearchFilters) -> models.ListingsR
     summary="Search Listings",
     description="Search listings based on specific attributes such as address, MLS number, unit type, days on market, number of bedrooms or washrooms. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
     operation_id="searchListings",
-    dependencies=[Depends(auth.get_current_user)],
+    # dependencies=[Depends(auth.get_current_user)],
 )
 async def search_listings(params: models.ListingSearchFilters):
     try:
@@ -239,7 +239,7 @@ async def get_stats_info():
     summary="City Statistics",
     description="Get statistics for a specific city. Use lower cases for all input parameters.",
     operation_id="getCityStats",
-    dependencies=[Depends(auth.get_current_user)],
+    # dependencies=[Depends(auth.get_current_user)],
 )
 async def get_city_stats(params: models.CityStatsRequest):
     try:
@@ -259,7 +259,7 @@ async def get_city_stats(params: models.CityStatsRequest):
     summary="City Type Statistics",
     description="Get statistics for a specific city and property type. Use lower cases for all input parameters.",
     operation_id="getCityTypeStats",
-    dependencies=[Depends(auth.get_current_user)],
+    # dependencies=[Depends(auth.get_current_user)],
 )
 async def get_city_type_stats(params: models.CityTypeStatsRequest):
     try:
@@ -279,7 +279,7 @@ async def get_city_type_stats(params: models.CityTypeStatsRequest):
     summary="City Property Type Statistics",
     description="Get statistics for a specific city and property type. Use lower cases for all input parameters.",
     operation_id="getCityPropertyTypeStats",
-    dependencies=[Depends(auth.get_current_user)],
+    # dependencies=[Depends(auth.get_current_user)],
 )
 async def get_city_property_type_stats(params: models.CityPropertyTypeStatsRequest):
     try:
@@ -301,7 +301,7 @@ async def get_city_property_type_stats(params: models.CityPropertyTypeStatsReque
     summary="City Bedrooms Statistics",
     description="Get statistics for a specific city and number of bedrooms. Use lower cases for all input parameters.",
     operation_id="getCityBedroomsStats",
-    dependencies=[Depends(auth.get_current_user)],
+    # dependencies=[Depends(auth.get_current_user)],
 )
 async def get_city_bedrooms_stats(params: models.CityBedroomsStatsRequest):
     try:
