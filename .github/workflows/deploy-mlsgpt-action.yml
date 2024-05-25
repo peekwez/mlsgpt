@@ -15,6 +15,9 @@ jobs:
   build:
     name: Build
     environment: development
+    permissions:
+      contents: read
+      issues: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -36,6 +39,9 @@ jobs:
   deploy:
     needs: build
     environment: development
+    permissions:
+      contents: read
+      issues: write
     name: Deploy
     runs-on: ubuntu-latest
     steps:
