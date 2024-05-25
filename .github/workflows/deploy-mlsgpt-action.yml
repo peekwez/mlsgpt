@@ -32,6 +32,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/mlsgpt-amd64:latest
   deploy:
+    needs: build
     name: Deploy
     runs-on: ubuntu-latest
     steps:
