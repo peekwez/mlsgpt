@@ -1,5 +1,4 @@
 import httpx
-from rich.pretty import pprint as pp
 from datetime import datetime, timedelta
 from fastapi import HTTPException
 
