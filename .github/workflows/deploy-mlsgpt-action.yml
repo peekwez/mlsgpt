@@ -36,24 +36,24 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/mlsgpt-amd64:latest
-  deploy:
-    needs: build
-    environment: development
-    permissions:
-      contents: read
-      issues: write
-    name: Deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: "Deploy via SSH"
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.KEY }}
-          port: ${{ secrets.PORT }}
-          script: |
-            docker-compose stop | true
-            docker-compose rm -f | true
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/mlsgpt-amd64:latest
-            docker-compose up -d
+  # deploy:
+  #   needs: build
+  #   environment: development
+  #   permissions:
+  #     contents: read
+  #     issues: write
+  #   name: Deploy
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: "Deploy via SSH"
+  #       uses: appleboy/ssh-action@v1.0.3
+  #       with:
+  #         host: ${{ secrets.HOST }}
+  #         username: ${{ secrets.USERNAME }}
+  #         key: ${{ secrets.KEY }}
+  #         port: ${{ secrets.PORT }}
+  #         script: |
+  #           docker-compose stop | true
+  #           docker-compose rm -f | true
+  #           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/mlsgpt-amd64:latest
+  #           docker-compose up -d
