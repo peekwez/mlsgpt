@@ -46,7 +46,7 @@ class DataReader(object):
     def h3(self, lat: float, lng: float, resolution: int = 9):
         return h3.geo_to_h3(lat, lng, resolution)
 
-    def k_ring(self, address: str, resolution: int = 9, distance: int = 1):
+    def k_ring(self, address: str, resolution: int = 10, distance: int = 4):
         lat, lng = self.geocode(address).values()
         index = h3.geo_to_h3(lat, lng, resolution)
         values = h3.k_ring(h3.geo_to_h3(lat, lng, resolution), distance)
@@ -109,7 +109,7 @@ class DataReader(object):
         limit: int = LIMIT,
         offset: int = 0,
         resolution: int = 10,
-        distance: int = 5,
+        distance: int = 4,
         **kwargs,
     ):
 
@@ -122,7 +122,7 @@ class DataReader(object):
 
         # filter by other conditions
         for key, value in kwargs.items():
-            if value is [None, "Address"]:
+            if value is None:
                 continue
             query = query.filter(filters.filter_props(key, value))
 

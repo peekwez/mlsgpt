@@ -224,6 +224,14 @@ class SearchNearbyListings(BaseSearchFilters):
     max_price: float = Field(None, description="Maximum price to filter by")
     min_lease: float = Field(None, description="Minimum lease to filter by")
     max_lease: float = Field(None, description="Maximum lease to filter by")
+    resolution: int = Field(
+        10,
+        description="The resolution for the H3 hexagons. Default is 10. Higher narrow downs the search area but and is likely to return nothing.",
+    )
+    distance: int = Field(
+        4,
+        description="The H3 distance. Default is 4. Higher expands the search area and is slower. Increase this if you want more listings or nothing is returned after a call",
+    )
 
 
 class ListingNaturalLanguageSearch(BaseSearchFilters):

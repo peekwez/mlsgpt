@@ -186,6 +186,40 @@ async def search_listings(params: models.ListingSearchFilters):
 
 
 @app.post(
+    "/listings/search-nearby",
+    response_model=models.ListingsResponse,
+    summary="Search Listings Nearby",
+    description="Search listings based on nearby address, unit type, days on market, number of bedrooms or washrooms. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results. Use this endpoint when you want to find listings near a specific address. You can use the resolution and distance parameters to adjust the search radius.",
+    operation_id="searchNearbyListings",
+    dependencies=[Depends(auth.get_current_user)],
+)
+async def search_nearby_listings(params: models.SearchNearbyListings):
+    try:
+        props = reader.search_nearby(
+            limit=params.limit,
+            offset=params.offset,
+            address=params.address,
+            resolution=params.resolution,
+            distance=params.distance,
+            Type=params.type,
+            BedroomsTotal=params.bedrooms,
+            BathroomTotal=params.washrooms,
+            MaxPrice=params.max_price,
+            MinPrice=params.min_price,
+            MaxLease=params.max_lease,
+            MinLease=params.min_lease,
+        )
+    except Exception as e:
+        return handle_error(e)
+
+    return models.ListingsResponse(
+        num_items=len(props),
+        offset=params.offset,
+        items=[models.Property.model_validate(prop) for prop in props],
+    )
+
+
+@app.post(
     "/listings/semantic-search",
     response_model=models.ListingsResponse,
     summary="Natural Language Search",
