@@ -3,6 +3,7 @@ from mlsgpt.dbv2 import schema
 
 
 def filter_props(key, value):
+    condition = None
     match key:
         case "MaxPrice":
             condition = schema.Property.Price <= value
@@ -69,6 +70,8 @@ def filter_props(key, value):
             condition = or_(
                 *[schema.Property.BathroomTotal == bathrooms for bathrooms in value]
             )
+        case _:
+            raise ValueError(f"Invalid filter key :: {key}")
     return condition
 
 
@@ -107,5 +110,5 @@ def filter_nearby(resolution, values):
         case 15:
             condition = schema.H3Index.H3IndexR15.in_(values)
         case _:
-            raise ValueError("Invalid resolution")
+            raise ValueError(f"Invalid resolution :: {resolution}")
     return condition

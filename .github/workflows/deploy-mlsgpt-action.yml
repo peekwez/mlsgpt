@@ -1,5 +1,4 @@
 name: Build and Deploy MLSGPT
-concurrency: production
 on:
   push:
     branches:
@@ -10,21 +9,11 @@ on:
       - release/*
       - bugfix/*
       - fix/*
-env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-  HOST: ${{ secrets.HOST }}
-  USERNAME: ${{ secrets.USERNAME }}
-  KEY: ${{ secrets.KEY }}
-  PORT: ${{ secrets.PORT }}
 
 jobs:
   build:
     name: Build
     environment: development
-    permissions:
-      contents: read
-      issues: write
     runs-on: ubuntu-latest
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -49,9 +38,6 @@ jobs:
   # deploy:
   #   needs: build
   #   environment: development
-  #   permissions:
-  #     contents: read
-  #     issues: write
   #   name: Deploy
   #   runs-on: ubuntu-latest
   #   steps:
