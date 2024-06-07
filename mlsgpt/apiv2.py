@@ -48,7 +48,7 @@ app.mount("/static", StaticFiles(directory=ASSETS_PATH), name="static")
 templates = Jinja2Templates(ASSETS_PATH)
 
 
-@app.get("/login", operation_id="login")
+@app.get("/login", operation_id="login", include_in_schema=False)
 def login(request: Request):
     """Redirect user to Google for authentication."""
     state = request.query_params.get("state")
@@ -67,7 +67,7 @@ def login(request: Request):
     return RedirectResponse(url=full_auth_url)
 
 
-@app.get("/intermediate", operation_id="intermediate")
+@app.get("/intermediate", operation_id="intermediate", include_in_schema=False)
 async def intermediate(request: Request):
     code = request.query_params.get("code")
     state = request.query_params.get("state")
@@ -78,7 +78,7 @@ async def intermediate(request: Request):
     return RedirectResponse(f"{auth.OPENAPI_REDIRECT_URI}?{query_string}")
 
 
-@app.post("/token", operation_id="token")
+@app.post("/token", operation_id="token", include_in_schema=False)
 async def token(request: Request):
     """Handle the callback from Google with the authorization code."""
     request_data = await request.form()
@@ -106,7 +106,12 @@ async def token(request: Request):
     return response
 
 
-@app.get("/privacy", response_class=HTMLResponse, operation_id="getPrivacy")
+@app.get(
+    "/privacy",
+    response_class=HTMLResponse,
+    operation_id="getPrivacy",
+    include_in_schema=False,
+)
 async def privacy_policy(request: Request):
     return templates.TemplateResponse(
         "privacy.html", {"request": request}, status_code=200
@@ -119,6 +124,7 @@ async def privacy_policy(request: Request):
     description="Check the status of the API.",
     operation_id="home",
     dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
 )
 async def api_status():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -136,6 +142,7 @@ async def api_status():
     description="Retrieve all listings from the database. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
     operation_id="getAllListings",
     dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
 )
 async def get_all_listings(params: models.BaseSearchFilters) -> models.ListingsResponse:
     try:
@@ -157,6 +164,7 @@ async def get_all_listings(params: models.BaseSearchFilters) -> models.ListingsR
     description="Search listings based on specific attributes such as address, city, province, unit type, days on market, number of bedrooms or washrooms. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
     operation_id="searchListings",
     dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
 )
 async def search_listings(params: models.ListingSearchFilters):
     try:
@@ -168,6 +176,9 @@ async def search_listings(params: models.ListingSearchFilters):
             PostalCode=params.postal_code,
             Province=params.province,
             Type=params.type,
+            PropertyType=params.property_type,
+            OwnershipType=params.ownership_type,
+            ConstructionStyleAttachment=params.construction_style_attachment,
             BedroomsTotal=params.bedrooms,
             BathroomTotal=params.washrooms,
             MaxPrice=params.max_price,
@@ -192,6 +203,7 @@ async def search_listings(params: models.ListingSearchFilters):
     description="Search listings based on nearby address, unit type, days on market, number of bedrooms or washrooms. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results. Use this endpoint when you want to find listings near a specific address. You can use the resolution and distance parameters to adjust the search radius.",
     operation_id="searchNearbyListings",
     dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
 )
 async def search_nearby_listings(params: models.SearchNearbyListings):
     try:
@@ -202,6 +214,9 @@ async def search_nearby_listings(params: models.SearchNearbyListings):
             resolution=params.resolution,
             distance=params.distance,
             Type=params.type,
+            PropertyType=params.property_type,
+            OwnershipType=params.ownership_type,
+            ConstructionStyleAttachment=params.construction_style_attachment,
             BedroomsTotal=params.bedrooms,
             BathroomTotal=params.washrooms,
             MaxPrice=params.max_price,
@@ -226,6 +241,7 @@ async def search_nearby_listings(params: models.SearchNearbyListings):
     description="Uses natural language search to find listings based on a query that describes what you're looking for. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results. The threshold parameter can be used to adjust the similarity threshold for the search.",
     operation_id="semanticSearchListings",
     dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
 )
 async def semantic_search(
     params: models.ListingNaturalLanguageSearch,
@@ -274,6 +290,7 @@ async def get_stats_info():
     description="Get statistics for a specific city. Use lower cases for all input parameters.",
     operation_id="getCityStats",
     dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
 )
 async def get_city_stats(params: models.CityStatsRequest):
     try:
@@ -294,6 +311,7 @@ async def get_city_stats(params: models.CityStatsRequest):
     description="Get statistics for a specific city and property type. Use lower cases for all input parameters.",
     operation_id="getCityTypeStats",
     dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
 )
 async def get_city_type_stats(params: models.CityTypeStatsRequest):
     try:
@@ -314,6 +332,7 @@ async def get_city_type_stats(params: models.CityTypeStatsRequest):
     description="Get statistics for a specific city and property type. Use lower cases for all input parameters.",
     operation_id="getCityPropertyTypeStats",
     dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
 )
 async def get_city_property_type_stats(params: models.CityPropertyTypeStatsRequest):
     try:
@@ -330,12 +349,65 @@ async def get_city_property_type_stats(params: models.CityPropertyTypeStatsReque
 
 
 @app.post(
+    "/stats/city-ownership-type",
+    response_model=models.CityOwnershipTypeStatsResponse,
+    summary="City Ownership Type Statistics",
+    description="Get statistics for a specific city and ownership type. Use lower cases for all input parameters.",
+    operation_id="getCityOwnershipTypeStats",
+    dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
+)
+async def get_city_ownership_type_stats(params: models.CityOwnershipTypeStatsRequest):
+    try:
+        stats = reader.get_city_owner_type_stats(
+            city=params.city, ownership_type=params.ownership_type
+        )
+    except Exception as e:
+        return handle_error(e)
+
+    return models.CityOwnershipTypeStatsResponse(
+        num_items=len(stats),
+        items=[models.CityOwnershipTypeStats.model_validate(stat) for stat in stats],
+    )
+
+
+@app.post(
+    "/stats/city-construction-style-attachment",
+    response_model=models.CityConstructionStyleAttachmentStatsResponse,
+    summary="City Construction Style Attachment Statistics",
+    description="Get statistics for a specific city and construction style attachment. Use lower cases for all input parameters.",
+    operation_id="getCityConstructionStyleAttachmentStats",
+    dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
+)
+async def get_city_construction_style_attachment_stats(
+    params: models.CityConstructionStyleAttachmentStatsRequest,
+):
+    try:
+        stats = reader.get_city_construction_style_stats(
+            city=params.city,
+            construction_style_attachment=params.construction_style_attachment,
+        )
+    except Exception as e:
+        return handle_error(e)
+
+    return models.CityConstructionStyleAttachmentStatsResponse(
+        num_items=len(stats),
+        items=[
+            models.CityConstructionStyleAttachmentStats.model_validate(stat)
+            for stat in stats
+        ],
+    )
+
+
+@app.post(
     "/stats/city-bedrooms-total",
     response_model=models.CityBedroomsStatsResponse,
     summary="City Bedrooms Statistics",
     description="Get statistics for a specific city and number of bedrooms. Use lower cases for all input parameters.",
     operation_id="getCityBedroomsStats",
     dependencies=[Depends(auth.get_current_user)],
+    openapi_extra={"x-openai-isConsequential": False},
 )
 async def get_city_bedrooms_stats(params: models.CityBedroomsStatsRequest):
     try:

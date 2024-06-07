@@ -68,6 +68,44 @@ CREATE TABLE IF NOT EXISTS rsbr.city_bedrooms_stats (
 CREATE INDEX idx_city_bedrooms_stats_city ON rsbr.city_bedrooms_stats("City");
 CREATE INDEX idx_city_bedrooms_stats_bedrooms ON rsbr.city_bedrooms_stats("BedroomsTotal");
 
+CREATE TABLE IF NOT EXISTS rsbr.city_ownership_type_stats (
+    id SERIAL PRIMARY KEY,
+    "City" TEXT,
+    "OwnershipType" TEXT,
+    "InventoryCount" BIGINT,
+    "AveragePrice" NUMERIC,
+    "MedianPrice" NUMERIC,
+    "MinimumPrice" NUMERIC,
+    "MaximumPrice" NUMERIC,
+    "AverageDaysOnMarket" NUMERIC,
+    "MedianDaysOnMarket" NUMERIC,
+    "MinimumDaysOnMarket" NUMERIC,
+    "MaximumDaysOnMarket" NUMERIC,
+    "AveragePricePerSqft" NUMERIC
+);
+CREATE INDEX idx_city_ownership_type_stats_city ON rsbr.city_ownership_type_stats("City");
+CREATE INDEX idx_city_ownership_type_stats_ownership_type ON rsbr.city_ownership_type_stats("OwnershipType");
+
+
+CREATE TABLE IF NOT EXISTS rsbr.city_construction_style_stats (
+    id SERIAL PRIMARY KEY,
+    "City" TEXT,
+    "ConstructionStyleAttachment" TEXT,
+    "InventoryCount" BIGINT,
+    "AveragePrice" NUMERIC,
+    "MedianPrice" NUMERIC,
+    "MinimumPrice" NUMERIC,
+    "MaximumPrice" NUMERIC,
+    "AverageDaysOnMarket" NUMERIC,
+    "MedianDaysOnMarket" NUMERIC,
+    "MinimumDaysOnMarket" NUMERIC,
+    "MaximumDaysOnMarket" NUMERIC,
+    "AveragePricePerSqft" NUMERIC
+);
+CREATE INDEX idx_city_construction_style_stats_city ON rsbr.city_construction_style_stats("City");
+CREATE INDEX idx_city_construction_style_stats_construction_style ON rsbr.city_construction_style_stats("ConstructionStyleAttachment");
+
+
 CREATE TABLE IF NOT EXISTS rsbr.stats_info (
     id SERIAL PRIMARY KEY,
     "Attribute" TEXT,

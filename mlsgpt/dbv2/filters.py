@@ -38,6 +38,29 @@ def filter_props(key, value):
             condition = or_(
                 *[schema.Property.Type.ilike(f"%{type}%") for type in value]
             )
+        case "PropertyType":
+            condition = or_(
+                *[
+                    schema.Property.PropertyType.ilike(f"%{property_type}%")
+                    for property_type in value
+                ]
+            )
+        case "OwnershipType":
+            condition = or_(
+                *[
+                    schema.Property.OwnershipType.ilike(f"%{ownership_type}%")
+                    for ownership_type in value
+                ]
+            )
+        case "ConstructionStyleAttachment":
+            condition = or_(
+                *[
+                    schema.Property.ConstructionStyleAttachment.ilike(
+                        f"%{construction_style}%"
+                    )
+                    for construction_style in value
+                ]
+            )
         case "BedroomsTotal":
             condition = or_(
                 *[schema.Property.BedroomsTotal == bedrooms for bedrooms in value]

@@ -178,6 +178,47 @@ class DataReader(object):
             .all()
         )
 
+    def get_city_owner_type_stats(self, city: list[str], ownership_type: list[str]):
+        city_condition = or_(
+            *[schema.CityOwnershipTypeStats.City.ilike(f"%{city}%") for city in city]
+        )
+        ownership_type_condition = or_(
+            *[
+                schema.CityOwnershipTypeStats.OwnershipType.ilike(f"%{type}%")
+                for type in ownership_type
+            ]
+        )
+        return (
+            self.session.query(schema.CityOwnershipTypeStats)
+            .filter(city_condition)
+            .filter(ownership_type_condition)
+            .all()
+        )
+
+    def get_city_construction_style_stats(
+        self, city: list[str], construction_style_attachment: list[str]
+    ):
+        city_condition = or_(
+            *[
+                schema.CityConstructionStyleStats.City.ilike(f"%{city}%")
+                for city in city
+            ]
+        )
+        construction_style_condition = or_(
+            *[
+                schema.CityConstructionStyleStats.ConstructionStyleAttachment.ilike(
+                    f"%{type}%"
+                )
+                for type in construction_style_attachment
+            ]
+        )
+        return (
+            self.session.query(schema.CityConstructionStyleStats)
+            .filter(city_condition)
+            .filter(construction_style_condition)
+            .all()
+        )
+
     def get_city_bedrooms_stats(self, city: list[str], bedrooms: list[str]):
         city_condition = or_(
             *[schema.CityBedroomsStats.City.ilike(f"%{city}%") for city in city]

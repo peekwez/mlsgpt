@@ -34,11 +34,11 @@ class Property(Base):
     LocationDescription = Column(String)
     MaintenanceFee = Column(String)
     ManagementCompany = Column(String)
-    OwnershipType = Column(String)
+    OwnershipType = Column(String, index=True)
     ParkingSpaceTotal = Column(String)
     PoolType = Column(String)
     Price = Column(Numeric(38, 2))
-    PropertyType = Column(String)
+    PropertyType = Column(String, index=True)
     PublicRemarks = Column(String)
     TransactionType = Column(String)
     ZoningDescription = Column(String)
@@ -54,7 +54,7 @@ class Property(Base):
     BasementFeatures = Column(String)
     BasementType = Column(String)
     ConstructedDate = Column(String)
-    ConstructionStyleAttachment = Column(String)
+    ConstructionStyleAttachment = Column(String, index=True)
     CoolingType = Column(String)
     ExteriorFinish = Column(String)
     FireplacePresent = Column(String)
@@ -64,7 +64,7 @@ class Property(Base):
     HeatingType = Column(String)
     StoriesTotal = Column(Integer)
     SizeInterior = Column(String)
-    Type = Column(String)
+    Type = Column(String, index=True)
     SizeTotalText = Column(String)
     SizeFrontage = Column(String)
     AccessType = Column(String)
@@ -187,6 +187,44 @@ class CityPropertyTypeStats(Base):
     id = Column(Integer, primary_key=True)
     City = Column(String, index=True)
     PropertyType = Column(String)
+    InventoryCount = Column(Integer)
+    AveragePrice = Column(Numeric(38, 2))
+    MedianPrice = Column(Numeric(38, 2))
+    MinimumPrice = Column(Numeric(38, 2))
+    MaximumPrice = Column(Numeric(38, 2))
+    AverageDaysOnMarket = Column(Numeric(38, 2))
+    MedianDaysOnMarket = Column(Numeric(38, 2))
+    MinimumDaysOnMarket = Column(Numeric(38, 2))
+    MaximumDaysOnMarket = Column(Numeric(38, 2))
+    AveragePricePerSqft = Column(Numeric(38, 2))
+
+
+class CityOwnershipTypeStats(Base):
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "city_ownership_type_stats"
+
+    id = Column(Integer, primary_key=True)
+    City = Column(String, index=True)
+    OwnershipType = Column(String)
+    InventoryCount = Column(Integer)
+    AveragePrice = Column(Numeric(38, 2))
+    MedianPrice = Column(Numeric(38, 2))
+    MinimumPrice = Column(Numeric(38, 2))
+    MaximumPrice = Column(Numeric(38, 2))
+    AverageDaysOnMarket = Column(Numeric(38, 2))
+    MedianDaysOnMarket = Column(Numeric(38, 2))
+    MinimumDaysOnMarket = Column(Numeric(38, 2))
+    MaximumDaysOnMarket = Column(Numeric(38, 2))
+    AveragePricePerSqft = Column(Numeric(38, 2))
+
+
+class CityConstructionStyleStats(Base):
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "city_construction_style_stats"
+
+    id = Column(Integer, primary_key=True)
+    City = Column(String, index=True)
+    ConstructionStyleAttachment = Column(String)
     InventoryCount = Column(Integer)
     AveragePrice = Column(Numeric(38, 2))
     MedianPrice = Column(Numeric(38, 2))
