@@ -200,7 +200,7 @@ async def search_listings(params: models.ListingSearchFilters):
     "/listings/search-nearby",
     response_model=models.ListingsResponse,
     summary="Search Listings Nearby",
-    description="Search listings based on nearby address, unit type, days on market, number of bedrooms or washrooms. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results. Use this endpoint when you want to find listings near a specific address. You can use the resolution and distance parameters to adjust the search radius.",
+    description="Search listings based on nearby address, unit type, bedrooms or washrooms etc. Returns 10 items by default and a maximum of 30. Use the limit and offset parameters to paginate the results. You can use the resolution and distance parameters to adjust the search radius.",
     operation_id="searchNearbyListings",
     dependencies=[Depends(auth.get_current_user)],
     openapi_extra={"x-openai-isConsequential": False},
