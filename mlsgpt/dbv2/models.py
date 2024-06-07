@@ -206,6 +206,26 @@ class ListingSearchFilters(BaseSearchFilters):
     max_lease: float = Field(None, description="Maximum lease to filter by")
 
 
+class SearchNearbyListings(BaseSearchFilters):
+    address: str = Field(
+        None, description="The address to use for searching nearby listings"
+    )
+    type: list[str] = Field(
+        None,
+        description="A list of unit types to filter by (e.g. condo apt, condo townhouse, detached)",
+    )
+    bedrooms: list[int] = Field(
+        None, description="A list of number of bedrooms to filter by"
+    )
+    washrooms: list[int] = Field(
+        None, description="A list of number of washrooms to filter by"
+    )
+    min_price: float = Field(None, description="Minimum price to filter by")
+    max_price: float = Field(None, description="Maximum price to filter by")
+    min_lease: float = Field(None, description="Minimum lease to filter by")
+    max_lease: float = Field(None, description="Maximum lease to filter by")
+
+
 class ListingNaturalLanguageSearch(BaseSearchFilters):
     query: str = Field(..., description="Natural language search query")
     threshold: float = Field(

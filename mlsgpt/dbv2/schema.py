@@ -83,10 +83,37 @@ class Property(Base):
     Sold = Column(Integer)
     AlternateURL = Column(LargeBinary)
     Rooms = relationship("PropertyRooms", back_populates="Property")
+    H3Indexes = relationship("H3Index", back_populates="Property")
     # Embedding = relationship("Embedding", back_populates="Property")
     # Offices = Column(String, index=True)
     # Agents = Column(String, index=True)
     # Board = Column(String, index=True)
+
+
+class H3Index(Base):
+    __table_args__ = {"schema": "rsbr"}
+    __tablename__ = "h3_index"
+
+    id = Column(Integer, primary_key=True)
+    ListingID = Column(Integer, ForeignKey("rsbr.property.ListingID"))
+    H3IndexR00 = Column(String, index=True)
+    H3IndexR01 = Column(String, index=True)
+    H3IndexR02 = Column(String, index=True)
+    H3IndexR03 = Column(String, index=True)
+    H3IndexR04 = Column(String, index=True)
+    H3IndexR05 = Column(String, index=True)
+    H3IndexR06 = Column(String, index=True)
+    H3IndexR07 = Column(String, index=True)
+    H3IndexR08 = Column(String, index=True)
+    H3IndexR09 = Column(String, index=True)
+    H3IndexR10 = Column(String, index=True)
+    H3IndexR11 = Column(String, index=True)
+    H3IndexR12 = Column(String, index=True)
+    H3IndexR13 = Column(String, index=True)
+    H3IndexR14 = Column(String, index=True)
+    H3IndexR15 = Column(String, index=True)
+    CreatedAt = Column(DateTime)
+    Property = relationship("Property", back_populates="H3Indexes")
 
 
 class PropertyRooms(Base):
