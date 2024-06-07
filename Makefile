@@ -4,6 +4,10 @@ start-services:
 	$(info Starting app...)
 	dotenv --file=.env-deploy run mlsgpt run-services --api-vesion=v2 --ngrok
 
+debug:
+	$(info Debugging app...)
+	dotenv --file=.env-deploy run mlsgpt run-services --api-version=v2
+
 push-code:
 	$(info Pushing to remote...)
 	git push origin $(BRANCH)

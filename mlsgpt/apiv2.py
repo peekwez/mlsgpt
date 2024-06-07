@@ -154,7 +154,7 @@ async def get_all_listings(params: models.BaseSearchFilters) -> models.ListingsR
     "/listings/search",
     response_model=models.ListingsResponse,
     summary="Search Listings",
-    description="Search listings based on specific attributes such as address, MLS number, unit type, days on market, number of bedrooms or washrooms. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
+    description="Search listings based on specific attributes such as address, city, province, unit type, days on market, number of bedrooms or washrooms. Returns 10 items by default and a maximum of 20. Use the limit and offset parameters to paginate the results.",
     operation_id="searchListings",
     dependencies=[Depends(auth.get_current_user)],
 )
