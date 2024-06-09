@@ -44,14 +44,14 @@ jobs:
       - name: "Deploy via SSH"
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ env.HOST }}
-          username: ${{ env.USERNAME }}
-          key: ${{ env.KEY }}
-          port: ${{ env.PORT }}
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_KEY }}
+          port: ${{ secrets.REMOTE_PORT }}
           script: |
             docker-compose ps | true
 
 # docker-compose stop | true
 # docker-compose rm -f | true
-# docker pull ${{ env.DOCKERHUB_USERNAME }}/mlsgpt-amd64:latest
+# docker pull ${{ secrets.DOCKERHUB_USERNAME }}/mlsgpt-amd64:latest
 # docker-compose up -d
