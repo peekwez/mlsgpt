@@ -48,6 +48,7 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.REMOTE_KEY }}
           port: ${{ secrets.REMOTE_PORT }}
+          passphrase: ${{ secrets.REMOTE_PASSPHRASE }}
           script: |
             docker-compose ps | true
 
