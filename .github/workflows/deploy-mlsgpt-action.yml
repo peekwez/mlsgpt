@@ -36,7 +36,8 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USER }}/${{ env.DOCKER_IMAGE }}:latest
   deploy:
-    needs: build
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/hotfix/') || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/bugfix/') || startsWith(github.ref, 'refs/heads/fix/')
     environment: development
     name: Deploy
     runs-on: ubuntu-latest
@@ -50,9 +51,9 @@ jobs:
           port: ${{ secrets.REMOTE_PORT }}
           passphrase: ${{ secrets.REMOTE_PASSPHRASE }}
           script: |
-            docker-compose ps | true
+            ls -al
 
 # docker-compose stop | true
 # docker-compose rm -f | true
-# docker pull ${{ secrets.DOCKERHUB_USERNAME }}/mlsgpt-amd64:latest
+# docker pull ${{ secrets.DOCKERHUB_USER }}/${{ env.DOCKER_IMAGE}}:latest
 # docker-compose up -d
