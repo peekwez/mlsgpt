@@ -51,9 +51,7 @@ jobs:
           port: ${{ secrets.REMOTE_PORT }}
           passphrase: ${{ secrets.REMOTE_PASSPHRASE }}
           script: |
-            ls -al
-
-# docker-compose stop | true
-# docker-compose rm -f | true
-# docker pull ${{ secrets.DOCKERHUB_USER }}/${{ env.DOCKER_IMAGE}}:latest
-# docker-compose up -d
+            docker-compose stop | true
+            docker-compose rm -f | true
+            docker pull ${{ secrets.DOCKERHUB_USER }}/${{ env.DOCKER_IMAGE}}:latest
+            docker-compose up -d
