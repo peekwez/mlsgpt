@@ -126,7 +126,10 @@ class CityPropertyTypeStats(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     City: str = Field(..., description="The city in lower case")
-    PropertyType: str = Field(..., description="The property type in lower case")
+    PropertyType: str = Field(
+        ...,
+        description="The property type in lower case",
+    )
     InventoryCount: int = Field(..., description="The inventory count")
     AveragePrice: float = Field(..., description="The average price")
     MedianPrice: float = Field(..., description="The median price")
@@ -160,11 +163,51 @@ class CityBedroomsStats(BaseModel):
     )
 
 
+class CityOwnershipTypeStats(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    City: str = Field(..., description="The city in lower case")
+    OwnershipType: str = Field(..., description="The ownership type in lower case")
+    InventoryCount: int = Field(..., description="The inventory count")
+    AveragePrice: float = Field(..., description="The average price")
+    MedianPrice: float = Field(..., description="The median price")
+    MinimumPrice: float = Field(..., description="The minimum price")
+    MaximumPrice: float = Field(..., description="The maximum price")
+    AverageDaysOnMarket: float = Field(..., description="The average days on market")
+    MedianDaysOnMarket: float = Field(..., description="The median days on market")
+    MinimumDaysOnMarket: float = Field(..., description="The minimum days on market")
+    MaximumDaysOnMarket: float = Field(..., description="The maximum days on market")
+    AveragePricePerSqft: float | None = Field(
+        ..., description="The average price per square foot"
+    )
+
+
+class CityConstructionStyleAttachmentStats(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    City: str = Field(..., description="The city in lower case")
+    ConstructionStyleAttachment: str = Field(
+        ..., description="The construction style attachment in lower case"
+    )
+    InventoryCount: int = Field(..., description="The inventory count")
+    AveragePrice: float = Field(..., description="The average price")
+    MedianPrice: float = Field(..., description="The median price")
+    MinimumPrice: float = Field(..., description="The minimum price")
+    MaximumPrice: float = Field(..., description="The maximum price")
+    AverageDaysOnMarket: float = Field(..., description="The average days on market")
+    MedianDaysOnMarket: float = Field(..., description="The median days on market")
+    MinimumDaysOnMarket: float = Field(..., description="The minimum days on market")
+    MaximumDaysOnMarket: float = Field(..., description="The maximum days on market")
+    AveragePricePerSqft: float | None = Field(
+        ..., description="The average price per square foot"
+    )
+
+
 class StatsInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     Attribute: str = Field(..., description="Name")
-    Values: list[str] = Field(..., description="Values")
+    Values: list[str | None] = Field(..., description="Values")
 
 
 class BaseSearchFilters(BaseModel):
@@ -178,7 +221,74 @@ class BaseSearchFilters(BaseModel):
     )
 
 
-class ListingSearchFilters(BaseSearchFilters):
+class BaseSearchFieldFilters(BaseSearchFilters):
+    type: list[str] = Field(
+        None,
+        description="A list of unit types to filter by (e.g. condo apt, condo townhouse, detached)",
+        json_schema_extra={
+            "examples": [
+                "apartment",
+                "commercial apartment",
+                "duplex",
+                "fourplex",
+                "house",
+                "mobile home",
+                "modular",
+                "multi-family",
+                "other",
+                "row / townhouse",
+                "triplex",
+            ]
+        },
+    )
+
+    property_type: list[str] = Field(
+        None,
+        description="A list of property types to filter by",
+        json_schema_extra={"examples": ["multi-family", "single family"]},
+    )
+
+    ownership_type: list[str] = Field(
+        None,
+        description="A list of ownership types to filter by",
+        json_schema_extra={
+            "examples": [
+                "condominium",
+                "condominium/strata",
+                "cooperative",
+                "freehold",
+                "leasehold",
+                "leasehold condo/strata",
+                "life lease",
+                "other, see remarks",
+                "shares in co-operative",
+                "timeshare/fractional",
+                "undivided co-ownership",
+            ]
+        },
+    )
+
+    construction_style_attachment: list[str] = Field(
+        None,
+        description="A list of construction style attachments to filter by",
+        json_schema_extra={
+            "examples": ["attached", "detached", "link", "semi-detached", "up and down"]
+        },
+    )
+
+    bedrooms: list[int] = Field(
+        None, description="A list of number of bedrooms to filter by"
+    )
+    washrooms: list[int] = Field(
+        None, description="A list of number of washrooms to filter by"
+    )
+    min_price: float = Field(None, description="Minimum price to filter by")
+    max_price: float = Field(None, description="Maximum price to filter by")
+    min_lease: float = Field(None, description="Minimum lease to filter by")
+    max_lease: float = Field(None, description="Maximum lease to filter by")
+
+
+class ListingSearchFilters(BaseSearchFieldFilters):
     address: list[str] = Field(
         None, description="A list of addresses to use for filtering"
     )
@@ -190,20 +300,20 @@ class ListingSearchFilters(BaseSearchFilters):
     province: list[str] = Field(
         None, description="A list of provinces to use for filtering"
     )
-    type: list[str] = Field(
-        None,
-        description="A list of unit types to filter by (e.g. condo apt, condo townhouse, detached)",
+
+
+class SearchNearbyListings(BaseSearchFieldFilters):
+    address: str = Field(
+        None, description="The address to use for searching nearby listings"
     )
-    bedrooms: list[int] = Field(
-        None, description="A list of number of bedrooms to filter by"
+    resolution: int = Field(
+        10,
+        description="The resolution for the H3 hexagons. Default is 10. Higher narrow downs the search area but and is likely to return nothing.",
     )
-    washrooms: list[int] = Field(
-        None, description="A list of number of washrooms to filter by"
+    distance: int = Field(
+        10,
+        description="The H3 distance. Default is 10. Higher expands the search area and is slower. Increase this if you want more listings or nothing is returned after a call",
     )
-    min_price: float = Field(None, description="Minimum price to filter by")
-    max_price: float = Field(None, description="Maximum price to filter by")
-    min_lease: float = Field(None, description="Minimum lease to filter by")
-    max_lease: float = Field(None, description="Maximum lease to filter by")
 
 
 class ListingNaturalLanguageSearch(BaseSearchFilters):
@@ -236,20 +346,41 @@ class CityStatsResponse(BaseModel):
 
 class CityTypeStatsRequest(BaseModel):
     city: list[str] = Field(..., description="A list of cities to fetch statistics for")
-    type: list[str] = Field(..., description="A list of types to fetch statistics for")
+    type: list[str] = Field(
+        ...,
+        description="A list of types to fetch statistics for",
+        json_schema_extra={
+            "examples": [
+                "apartment",
+                "commercial apartment",
+                "duplex",
+                "fourplex",
+                "house",
+                "mobile home",
+                "modular",
+                "multi-family",
+                "other",
+                "row / townhouse",
+                "triplex",
+            ]
+        },
+    )
 
 
 class CityTypeStatsResponse(BaseModel):
     num_items: int = Field(..., description="Number of items returned")
     items: list[CityTypeStats] = Field(
-        ..., description="List of city type statistics returned"
+        ...,
+        description="List of city type statistics returned",
     )
 
 
 class CityPropertyTypeStatsRequest(BaseModel):
     city: list[str] = Field(..., description="A list of cities to fetch statistics for")
     property_type: list[str] = Field(
-        ..., description="A list of property types to fetch statistics for"
+        ...,
+        description="A list of property types to fetch statistics for",
+        json_schema_extra={"examples": ["multi-family", "single family"]},
     )
 
 
@@ -277,3 +408,52 @@ class CityBedroomsStatsResponse(BaseModel):
 class StatsInfoResponse(BaseModel):
     num_items: int = Field(..., description="Number of items returned")
     items: list[StatsInfo] = Field(..., description="List of stats info returned")
+
+
+class CityOwnershipTypeStatsRequest(BaseModel):
+    city: list[str] = Field(..., description="A list of cities to fetch statistics for")
+    ownership_type: list[str] = Field(
+        ...,
+        description="A list of ownership types to fetch statistics for",
+        json_schema_extra={
+            "examples": [
+                "condominium",
+                "condominium/strata",
+                "cooperative",
+                "freehold",
+                "leasehold",
+                "leasehold condo/strata",
+                "life lease",
+                "other, see remarks",
+                "shares in co-operative",
+                "timeshare/fractional",
+                "undivided co-ownership",
+            ]
+        },
+    )
+
+
+class CityOwnershipTypeStatsResponse(BaseModel):
+    num_items: int = Field(..., description="Number of items returned")
+    items: list[CityOwnershipTypeStats] = Field(
+        ..., description="List of city ownership type statistics returned"
+    )
+
+
+class CityConstructionStyleAttachmentStatsRequest(BaseModel):
+    city: list[str] = Field(..., description="A list of cities to fetch statistics for")
+    construction_style_attachment: list[str] = Field(
+        ...,
+        description="A list of construction style attachments to fetch statistics for",
+        json_schema_extra={
+            "examples": ["attached", "detached", "link", "semi-detached", "up and down"]
+        },
+    )
+
+
+class CityConstructionStyleAttachmentStatsResponse(BaseModel):
+    num_items: int = Field(..., description="Number of items returned")
+    items: list[CityConstructionStyleAttachmentStats] = Field(
+        ...,
+        description="List of city construction style attachment statistics returned",
+    )

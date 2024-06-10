@@ -1,9 +1,12 @@
 import os
+import h3
+import googlemaps
 from openai import OpenAI
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, or_, text
 
 from mlsgpt.dbv2 import schema
+from mlsgpt.dbv2 import filters
 from mlsgpt.db import models
 
 DSN = "postgresql://{}:{}@{}:{}/{}"
@@ -28,12 +31,26 @@ class DataReader(object):
         self.session = create_session()
         self.session.expire_all()
         self.llm = OpenAI()
+        self.gmaps = googlemaps.Client(key=os.getenv("GOOGLE_MAPS_API_KEY"))
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.session.close()
+
+    def geocode(self, address: str):
+        geo = self.gmaps.geocode(address)
+        return geo[0]["geometry"]["location"]
+
+    def h3(self, lat: float, lng: float, resolution: int = 9):
+        return h3.geo_to_h3(lat, lng, resolution)
+
+    def k_ring(self, address: str, resolution: int = 10, distance: int = 4):
+        lat, lng = self.geocode(address).values()
+        index = h3.geo_to_h3(lat, lng, resolution)
+        values = h3.k_ring(h3.geo_to_h3(lat, lng, resolution), distance)
+        return values, index
 
     def embed(self, data: str):
         response = self.llm.embeddings.create(
@@ -61,61 +78,8 @@ class DataReader(object):
         for key, value in kwargs.items():
             if value is None:
                 continue
+            query = query.filter(filters.filter_props(key, value))
 
-            match key:
-                case "MaxPrice":
-                    condition = schema.Property.Price <= value
-                case "MinPrice":
-                    condition = schema.Property.Price >= value
-                case "MaxLease":
-                    condition = schema.Property.Lease <= value
-                case "MinLease":
-                    condition = schema.Property.Lease >= value
-                case "Address":
-                    condition = or_(
-                        *[
-                            schema.Property.StreetAddress.ilike(f"%{address}%")
-                            for address in value
-                        ]
-                    )
-                case "City":
-                    condition = or_(
-                        *[schema.Property.City.ilike(f"%{city}%") for city in value]
-                    )
-                case "PostalCode":
-                    condition = or_(
-                        *[
-                            schema.Property.PostalCode.ilike(f"%{post_code}%")
-                            for post_code in value
-                        ]
-                    )
-                case "Province":
-                    condition = or_(
-                        *[
-                            schema.Property.Province.ilike(f"%{province}%")
-                            for province in value
-                        ]
-                    )
-                case "Type":
-                    condition = or_(
-                        *[schema.Property.Type.ilike(f"%{type}%") for type in value]
-                    )
-                case "BedroomsTotal":
-                    condition = or_(
-                        *[
-                            schema.Property.BedroomsTotal == bedrooms
-                            for bedrooms in value
-                        ]
-                    )
-                case "BathroomTotal":
-                    condition = or_(
-                        *[
-                            schema.Property.BathroomTotal == bathrooms
-                            for bathrooms in value
-                        ]
-                    )
-
-            query = query.filter(condition)
         return (
             query.order_by(text('CAST("LastUpdated" AS TIMESTAMP) DESC'))
             .limit(min(limit, LIMIT))
@@ -138,6 +102,41 @@ class DataReader(object):
             .offset(offset)
             .all()
         )
+
+    def search_nearby(
+        self,
+        address: str,
+        limit: int = LIMIT,
+        offset: int = 0,
+        resolution: int = 10,
+        distance: int = 10,
+        **kwargs,
+    ):
+
+        # get nearby properties first
+        values, address_h3_index = self.k_ring(address, resolution, distance)
+        condition = filters.filter_nearby(resolution, values)
+        query = (
+            self.session.query(schema.Property).join(schema.H3Index).filter(condition)
+        )
+
+        # filter by other conditions
+        for key, value in kwargs.items():
+            if value is None:
+                continue
+            query = query.filter(filters.filter_props(key, value))
+
+        # compute the h3 distance for each property and sort by it
+        def compute_distance(property):
+            property_h3_index = getattr(
+                property.H3Indexes[0], f"H3IndexR{resolution:02}"
+            )
+            return h3.h3_distance(address_h3_index, property_h3_index)
+
+        properties = query.all()
+        properties_sorted = sorted(properties, key=compute_distance)
+        properties_sorted = properties_sorted[offset : offset + limit]
+        return properties_sorted
 
     def get_stats_info(self):
         return self.session.query(schema.StatsInfo).all()
@@ -176,6 +175,47 @@ class DataReader(object):
             self.session.query(schema.CityPropertyTypeStats)
             .filter(city_condition)
             .filter(property_type_condition)
+            .all()
+        )
+
+    def get_city_owner_type_stats(self, city: list[str], ownership_type: list[str]):
+        city_condition = or_(
+            *[schema.CityOwnershipTypeStats.City.ilike(f"%{city}%") for city in city]
+        )
+        ownership_type_condition = or_(
+            *[
+                schema.CityOwnershipTypeStats.OwnershipType.ilike(f"%{type}%")
+                for type in ownership_type
+            ]
+        )
+        return (
+            self.session.query(schema.CityOwnershipTypeStats)
+            .filter(city_condition)
+            .filter(ownership_type_condition)
+            .all()
+        )
+
+    def get_city_construction_style_stats(
+        self, city: list[str], construction_style_attachment: list[str]
+    ):
+        city_condition = or_(
+            *[
+                schema.CityConstructionStyleStats.City.ilike(f"%{city}%")
+                for city in city
+            ]
+        )
+        construction_style_condition = or_(
+            *[
+                schema.CityConstructionStyleStats.ConstructionStyleAttachment.ilike(
+                    f"%{type}%"
+                )
+                for type in construction_style_attachment
+            ]
+        )
+        return (
+            self.session.query(schema.CityConstructionStyleStats)
+            .filter(city_condition)
+            .filter(construction_style_condition)
             .all()
         )
 

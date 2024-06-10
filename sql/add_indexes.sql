@@ -30,3 +30,9 @@
 
 -- CREATE INDEX IF NOT EXISTS PropertyNeighbourhoodIndex
 -- ON rsbr.property USING btree("Neighbourhood" ASC NULLS LAST)
+
+-- CREATE INDEX IF NOT EXISTS PropertyOwnershipTypeIndex
+-- ON rsbr.property USING btree("OwnershipType" ASC NULLS LAST);
+
+-- CREATE INDEX IF NOT EXISTS PropertyConstructionStyleAttachmentIndex
+-- ON rsbr.property USING btree("ConstructionStyleAttachment" ASC NULLS LAST)

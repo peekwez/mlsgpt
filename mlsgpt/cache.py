@@ -1,12 +1,11 @@
 import httpx
-from rich.pretty import pprint as pp
 from datetime import datetime, timedelta
 from fastapi import HTTPException
 
 from mlsgpt.db import models
 from mlsgpt.dbv2 import store
 
-CACHE_EXPIRY_MINUTES = 30
+CACHE_EXPIRY_MINUTES = 60 * 8
 GOOGLE_PROFILE_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 
