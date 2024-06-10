@@ -224,7 +224,7 @@ class BaseSearchFilters(BaseModel):
 class BaseSearchFieldFilters(BaseSearchFilters):
     type: list[str] = Field(
         None,
-        description="A list of unit types to filter by (e.g. condo apt, condo townhouse, detached)",
+        description="A list of unit types to filter by (e.g. apartment, house, duplex, triplex, other, etc.)",
         json_schema_extra={
             "examples": [
                 "apartment",
