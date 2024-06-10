@@ -109,7 +109,7 @@ class DataReader(object):
         limit: int = LIMIT,
         offset: int = 0,
         resolution: int = 10,
-        distance: int = 4,
+        distance: int = 10,
         **kwargs,
     ):
 

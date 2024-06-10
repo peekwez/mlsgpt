@@ -311,8 +311,8 @@ class SearchNearbyListings(BaseSearchFieldFilters):
         description="The resolution for the H3 hexagons. Default is 10. Higher narrow downs the search area but and is likely to return nothing.",
     )
     distance: int = Field(
-        4,
-        description="The H3 distance. Default is 4. Higher expands the search area and is slower. Increase this if you want more listings or nothing is returned after a call",
+        10,
+        description="The H3 distance. Default is 10. Higher expands the search area and is slower. Increase this if you want more listings or nothing is returned after a call",
     )
 
 
